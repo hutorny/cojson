@@ -92,7 +92,7 @@ namespace cojson {
 						env.msg(LVL::normal,
 							"BAD  #%3d: test '%s:%d' does not match master\n",
 							i, env.shortname(t->filename),t->index());
-						env.msg(LVL::normal, t->master());
+						env.msg(LVL::verbose, t->master());
 						++bad;
 						if( env.stoponfail() ) break;
 					}

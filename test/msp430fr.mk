@@ -1,6 +1,6 @@
 # Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
 #
-# pic32mx.mk - make script to build COJSON Library tests for PIC32MX130F256B
+# msp430fr.mk - make script to build COJSON Library tests for MSP430FR5849
 #
 # This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
 #
@@ -22,57 +22,66 @@
 # variable expected from the outer Makefile: 
 # BASE-DIR SRC-DIRS INCLUDES TARGET TARGET-DIR
 
-PREFIX ?= xc32-
+PREFIX ?= msp430-elf-
 CC  := @$(PREFIX)gcc$(SUFFIX)
 CXX := @$(PREFIX)g++$(SUFFIX)
 LD  := @$(PREFIX)g++$(SUFFIX)
 ASM := @$(PREFIX)gcc$(SUFFIX)
-OBJ := @$(PREFIX)bin2hex
+OBJ := @$(PREFIX)objcopy
 SIZE:= @$(PREFIX)size
 BOLD:=$(shell tput bold)
 NORM:=$(shell tput sgr0)
-FIND:= find /opt/microchip \( -readable -or \! -prune \) -type f -name \
+FIND:= find /opt/ti \( -readable -or \! -prune \) -type f -name \
   $(PREFIX)g++$(SUFFIX) | tail -1
 
 MAKEFLAGS += --no-builtin-rules
 
 CXX-FIX := $(realpath $(BASE-DIR)/../include)
 
--include $(BASE-DIR)/pic32mx.vars
+-include $(BASE-DIR)/msp430fr.vars
 export PATH
+
+LDPATH:=$(realpath $($(PREFIX)-PATH)/../)/include
+
+MCU ?= msp430fr6989
+MSP430FLAGS :=																\
+  -mmcu=$(MCU)																\
+  -mhwmult=32bit															\
+  -mlarge																	\
+  -mcode-region=lower														\
+  -mdata-region=upper														\
+
 
 CPPFLAGS += 																\
   $(addprefix -I,$(CXX-FIX) $(INCLUDES))									\
   $(addprefix -D,$(CXX-DEFS))												\
-  -mprocessor=32MX130F256B													\
+  $(MSP430FLAGS)															\
   -std=c++1y  																\
-  -membedded-data															\
   -Wall  																	\
   -pedantic																	\
+  -Os 																		\
   -fno-exceptions															\
   -fno-threadsafe-statics													\
-  -ffunction-sections														\
-  -fdata-sections															\
-  -ffreestanding															\
   -fno-rtti																	\
   -fno-use-cxa-atexit														\
   -fno-check-new															\
-  -fenforce-eh-specs														\
+  -ffunction-sections														\
+  -fdata-sections															\
+  -ffreestanding															\
 
 CFLAGS += 																	\
   $(addprefix -I,$(INCLUDES))												\
   $(addprefix -D,$(CXX-DEFS))												\
-  -mprocessor=32MX130F256B													\
+  $(MSP430FLAGS)															\
   -std=c11																	\
+  -Os 																		\
   -Wall  																	\
   -pedantic																	\
   -ffunction-sections 														\
   -fdata-sections 															\
-  -fsigned-char																\
   -ffreestanding															\
 
 ASMFLAGS :=																	\
-  -mprocessor=32MX130F256B													\
   -pedantic																	\
   -fsigned-char																\
   -ffunction-sections														\
@@ -80,21 +89,16 @@ ASMFLAGS :=																	\
   -ffreestanding															\
   -x assembler-with-cpp														\
 
-
 LDFLAGS +=																	\
-  -ffreestanding															\
-  -Xlinker																	\
-  --gc-sections																\
-  -Wl,--defsym=_min_heap_size=4												\
+  $(CPPFLAGS)																\
+  -T$(LDPATH)/$(MCU).ld														\
+  -Xlinker --gc-sections													\
+  -Wl,-s,-relax,-Map,$@.map													\
 
-#  
-METRIC-FLAGS +=																\
-  -ffreestanding															\
-  -Xlinker																	\
-  --gc-sections																\
-  -Wl,--defsym=_min_heap_size=4												\
+#METRIC-FLAGS +=															\
 
-#OFLAGS +=																	\
+OFLAGS +=																	\
+  -O ihex																	\
 
 SFLAGS := 																	\
   --format=berkeley															\
@@ -108,32 +112,40 @@ COJSON-OBJS :=																\
 
 OBJS := 																	\
   $(COJSON-OBJS)															\
-  pic32mx.o																	\
+  avrcppfix.o																\
+  msp430fr.o																\
 
 #this set of tests probably exceeds ROM capacity of 32MX130F256B
-pic32mx-OBJS :=																\
+msp430fr-OBJS :=															\
   001.o																		\
   002.o																		\
   003.o																		\
   004.o																		\
   004.cpp.o																	\
   005.o																		\
+
+msp430fra-OBJS :=															\
   030.o																		\
   031.o																		\
   032.o																		\
+
+msp430frb-OBJS :=															\
+  080.o																		\
+  100.o																		\
+
+msp430frc-OBJS :=															\
   033.o																		\
   034.o																		\
   035.o																		\
   036.o																		\
-  080.o																		\
-  100.o																		\
-  101.o																		\
 
 100.o : FILE-FLAGS:=-Wno-overflow
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
+# 09-complex-object metric does not fit ROM
 METRICS     := $(METRIC-SRCS:.cpp=.size)
 METRIC-OBJS := 																\
+  avrcppfix.o																\
   $(COJSON-OBJS)															\
 
 vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
@@ -161,34 +173,35 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
 %.size: %.
 	$(SIZE) $< > $@
 
-%.: %.cpp 00-base.o $(METRIC-OBJS)
-	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) $(METRIC-FLAGS) -o $@ $(filter-out $@o,$^)
+%.: %.o 00-base.o $(METRIC-OBJS)
+	@echo "    $(BOLD)ld$(NORM)" $(notdir $<)
+	$(LD) $(LDFLAGS) $(METRIC-FLAGS) -o $@ $< $(filter-out $<,$^)
 
 $(TARGET-DIR)/%.elf: $(OBJS) $($(TARGET)-OBJS)
 	@echo "    $(BOLD)ld$(NORM) " $(notdir $@)
 	$(LD) $(LDFLAGS) -o $@ $^
 	@chmod a-x $@
 
-$(TARGET-DIR)/%.hex: $(TARGET-DIR)/%.elf $(BASE-DIR)/pic32mx.vars
-	@echo "$(BOLD)bin2hex$(NORM)" $(notdir $@)
-	$(OBJ)	$(OFLAGS) $<
+$(TARGET-DIR)/%.hex: $(TARGET-DIR)/%.elf $(BASE-DIR)/msp430fr.vars
+	@echo "$(BOLD)objcopy$(NORM)" $(notdir $@)
+	$(OBJ)	$(OFLAGS) $< $@
 	$(SIZE) $(SFLAGS) $<
 
 $(TARGET): $(TARGET-DIR)/$(TARGET).hex
 
-$(BASE-DIR)/pic32mx.metrics.txt: $(METRICS)
+$(BASE-DIR)/msp430fr.metrics.txt: $(METRICS)
 	@head -1 $< > $@
 	@grep -h -v filename  $(sort $^) >> $@
 	@cat $@
 
-$(BASE-DIR)/pic32mx.vars:
+$(BASE-DIR)/msp430fr.vars:
 	@echo "# lookup for $(PREFIX)g++$(SUFFIX)" > $@
-	@echo $(if $(shell which $(PREFIX)g++$(SUFFIX)),								\
-		"# found in path\n# "$(shell which $(PREFIX)g++$(SUFFIX)),	\
-		echo PATH=$(dir $(shell $(FIND))):$$PATH)  >> $@
+	@echo $(if $(shell which $(PREFIX)g++$(SUFFIX)),						\
+		"# found in path\n# "$(shell which $(PREFIX)g++$(SUFFIX)),			\
+		$(PREFIX)-PATH=$(dir $(shell $(FIND)))"\n"							\
+		PATH=$(dir $(shell $(FIND))):$$PATH)  >> $@
 
-metrics: $(BASE-DIR)/pic32mx.metrics.txt
+metrics: $(BASE-DIR)/msp430fr.metrics.txt
 
 rebuild: clean $(TARGET)
 

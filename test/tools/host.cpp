@@ -19,9 +19,10 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "host-env.hpp"
 #include <utility>
 #include <iostream>
+#include "host-env.hpp"
+#include "cojson_float.hpp"
 
 //TODO run test by file & index (e.g. 101:4)
 //TODO remove .cpp from text identity, e.g. 101.cpp:4 -> 101:4
@@ -270,6 +271,7 @@ int main(int argc, char** argv) noexcept {
 		environment.msg(LVL::silent, "Invalid option: '%s'\nUse -? for help\n", args.unknown);
 		return 1;
 	}
+
 	return environment.isbenchmark() ?
 		Test::benchmark(environment) : Test::runall(environment);
 }

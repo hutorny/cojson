@@ -70,12 +70,10 @@ static void run(lexer& in, ostream& out) {}
 runner empty(run);
 
 void setup() {
-	Config& tmp = *(Config*)nullptr;
+	volatile Config& tmp = *(Config*)nullptr;
 	/*some statements to activate operations on double, and long */
 	tmp.loadavg[0] = tmp.loadavg[1] * 10 + tmp.loadavg[2];
 	tmp.memtotal = tmp.uptime * 10L + tmp.connmax;
-	if( tmp.loadavg[0] < tmp.loadavg[1] )
-		printf("%d %ld %g\n",tmp.conncount, tmp.memtotal, tmp.loadavg[0]);
 }
 
 void loop() {

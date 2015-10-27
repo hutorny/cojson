@@ -19,8 +19,6 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include <cstdio>
-#include <cmath>
 #include "test.hpp"
 
 named_static<double,100> d0("D0",12345678.91);
@@ -112,9 +110,11 @@ Test101 Test101::tests[] = {
 static const master_t Master[details::countof(Test101::tests)] = {
 	_P_(0), _P_(1), _P_(2), _P_(3), _P_(4)
 };
-
-#include "101.inc"
-
+#ifdef TEST_WITH_SPRINTF
+#	include "101f.inc"
+#else
+#	include "101.inc"
+#endif
 const master_t Test101::master() const noexcept {
 	return Master[index()];
 }

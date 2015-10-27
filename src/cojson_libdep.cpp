@@ -19,79 +19,15 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "cojson.hpp"
 /* any of the includes below could be replaced with an empty stub 			*/
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include <wchar.h>
+/* end of 'any of the includes'												*/
+#include "cojson.hpp"
+#include "cojson_float.hpp"
 
 namespace cojson {
-namespace detectors {
-/****************************************************************************
- *				  presence detector for dependent features					*
- ****************************************************************************/
-template<class>
-struct sfinae_true : std::true_type{};
-
-/* snprintf */
-template<typename T, typename C>
-static auto test_snprintf(int) -> sfinae_true<decltype(
-	snprintf(std::declval<C*>(), 0,
-		std::declval<const C*>(), std::declval<T>())
-)>;
-template<typename, typename>
-static auto test_snprintf(long) -> std::false_type;
-template<class T, typename C>
-struct has_snprintf : decltype(test_snprintf<T,C>(0)){};
-
-/* sprintf */
-template<typename T, typename C>
-static auto test_sprintf(int) -> sfinae_true<decltype(
-	sprintf(std::declval<C*>(), 0,
-		std::declval<const C*>(), std::declval<T>())
-)>;
-template<typename, typename>
-static auto test_sprintf(long) -> std::false_type;
-template<class T, typename C>
-struct has_sprintf : decltype(test_snprintf<T,C>(0)){};
-
-/* swprintf */
-template<typename T, typename C>
-static auto test_swprintf(int) -> sfinae_true<decltype(
-			swprintf(std::declval<C*>(), 0,
-				std::declval<const C*>(), std::declval<T>())
-)>;
-template<typename, typename>
-static auto test_swprintf(long) -> std::false_type;
-template<class T, typename C>
-struct has_swprintf : decltype(test_swprintf<T,C>(0)){};
-
-/* exp10 */
-
-template<typename T>
-static auto test_exp10(int) -> sfinae_true<decltype(
-	exp10(std::declval<T>())
-)>;
-
-template<typename>
-static auto test_exp10(long) -> std::false_type;
-
-template<class T>
-struct has_exp10 : decltype(test_exp10<T>(0)){};
-
-template<typename T>
-static auto test_strcmp(int) -> sfinae_true<decltype(
-	strcmp(std::declval<T>(),std::declval<T>())
-)>;
-
-template<typename>
-static auto test_strcmp(long) -> std::false_type;
-
-template<typename T>
-struct has_strcmp : decltype(test_strcmp<T>(0)){};
-
-}
 using namespace detectors;
 
 namespace details {
@@ -126,21 +62,21 @@ template<typename T, bool a, bool b>
 struct any_printf<wchar_t, T, true, a, b> {
 	static constexpr bool present = true;
 	static inline int gfmt(wchar_t* dst, size_t s, T val) noexcept {
-		return swprintf(dst, s, L"%g", val);
+		return swprintf(dst, s, L"%.*g", config::write_double_precision,val);
 	}
 };
 template<typename T, bool a>
 struct any_printf<char, T, false, true, a> {
 	static constexpr bool present = true;
 	static inline int gfmt(char* dst, size_t s, T val) noexcept {
-		return snprintf(dst, s, "%g", val);
+		return snprintf(dst, s, "%.*g", config::write_double_precision, val);
 	}
 };
 template<typename T>
 struct any_printf<char, T, false, false, true> {
 	static constexpr bool present = true;
 	static inline int gfmt(char* dst, size_t s, T val) noexcept {
-		return sprintf(dst, "%g", val);
+		return sprintf(dst, "%.*g", config::write_double_precision, val);
 	}
 };
 
@@ -169,10 +105,22 @@ struct any<C,false,true> {
 
 template<typename T, bool has = has_exp10<T>::value>
 struct exp10_helper {
-	static inline T calc(short n) noexcept {
+	static T calc(short n) noexcept {
 		T v = 1.;
-		while( n > 0 ) { v *= 10.; --n; }
-		while( n < 0 ) { v /= 10.; ++n; }
+		while( n >=  6 ) { v *= 1e+6;  n -= 6; }
+		while( n <= -6 ) { v *= 1e-6;  n += 6; }
+		switch( n ) {
+		case -5: return v * 1e-5;
+		case -4: return v * 1e-4;
+		case -3: return v * 1e-3;
+		case -2: return v * 1e-2;
+		case -1: return v * 1e-1;
+		case  1: return v * 1e+1;
+		case  2: return v * 1e+2;
+		case  3: return v * 1e+3;
+		case  4: return v * 1e+4;
+		case  5: return v * 1e+5;
+		}
 		return v;
 	}
 };
@@ -180,7 +128,6 @@ struct exp10_helper {
 template<typename T>
 struct exp10_helper<T,true> {
 	static inline T calc(short n) noexcept {
-		static_assert(has_exp10<T>::value,"No");
 		return exp10((T)n);
 	}
 };
@@ -195,7 +142,6 @@ float exp_10<float>(short n) noexcept {
 	return exp10_helper<float>::calc(n);
 }
 
-
 bool member::match(const char_t* a, const char_t* b) noexcept {
 	return string_helper<const char_t*>::match(a,b);
 }
@@ -204,7 +150,31 @@ template<>
 bool gfmt<char_t*, double>(char_t* buf, size_t size, double val) noexcept {
 	return any<char_t>::gfmt(buf, size, val);
 }
+using impl_is = config::write_double_impl_is;
+template<impl_is = config::write_double_impl>
+bool write_double_impl(const double& val, ostream& out) noexcept;
 
+template<>
+inline bool write_double_impl<impl_is::internal>(
+		const double& val, ostream& out) noexcept {
+	return floating::serialize<ostream,config::write_double_integral_type>(
+			val, out, config::write_double_precision);
+}
+
+template<>
+inline bool write_double_impl<impl_is::with_sprintf>(
+		const double& val, ostream& out) noexcept {
+	temporary tmp;
+	if( ! any<char_t>::gfmt(tmp.buffer, tmp.size, val) ) {
+		out.error(error_t::overrun);
+		return false;
+	}
+	return out.put(tmp.buffer);
+}
+
+bool writer<double>::write(const double& val, ostream& out) noexcept {
+		return write_double_impl<>(val,out);
+}
 
 }}
 

@@ -43,8 +43,11 @@ INCLUDES := 																\
   tools																		\
   suites/include															\
 
-HOST-TARGETS := host uchar wchar char16 char32 overflow saturate
-TOP-TARGETS := all hosts $(HOST-TARGETS) mega megaa megab teensy3 pic32mx
+HOST-TARGETS := host uchar wchar char16 char32 overflow saturate sprintf
+MEGA-TARGETS := mega megaa megab
+MSP430-TARGETS := msp430fr msp430fra msp430frb msp430frc
+TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(MSP430-TARGETS)	\
+               teensy3 teensy3a pic32mx msp430fr
 
 .PHONY: help
 
@@ -61,6 +64,7 @@ help:
 	@echo "Other top goals covering various aspects:"
 	@echo "    $(BOLD)megaa$(NORM)  - unit tests not included in mega"
 	@echo "    $(BOLD)megab$(NORM)  - benchmarking tests for Arduino Mega"
+	@echo "    $(BOLD)teensy3a$(NORM)-unit tests not included in teensy3"
 	@echo "    $(BOLD)uchar$(NORM)  - host tests for unsigned char"
 	@echo "    $(BOLD)wchar$(NORM)  - host tests for wchar_t"
 	@echo "    $(BOLD)char16$(NORM) - host tests for char16_t"
@@ -68,12 +72,12 @@ help:
 	@echo "    $(BOLD)overflow$(NORM)-tests for error on integral overflow"
 	@echo "    $(BOLD)saturate$(NORM)-tests for staturation on integral overflow"
 	@echo "Special goals:"
-	@echo "    $(BOLD)all$(NORM)             - builds all top goals"
-	@echo "    $(BOLD)hosts$(NORM)           - builds all host goals"
-	@echo "    $(BOLD)<goal> clean$(NORM)    - cleans working directory"
-	@echo "    $(BOLD)<goal> rebuild$(NORM)  - makes a clean rebuild"
-	@echo "    $(BOLD)mega metrics$(NORM)    - builds code size metrics for mega"
-	@echo "    $(BOLD)teensy3 metrics$(NORM) - builds code size metrics for teensy3"
+	@echo "    $(BOLD)all$(NORM)           - builds all top goals"
+	@echo "    $(BOLD)hosts$(NORM)         - builds all host goals"
+	@echo "    $(BOLD)<goal> clean$(NORM)  - cleans working directory"
+	@echo "    $(BOLD)<goal> rebuild$(NORM)- makes a clean rebuild"
+	@echo "    $(BOLD)<goal> metrics$(NORM)- builds code size metrics for the goal,"
+	@echo "                    one of: mega, teensy3, pic32mx, msp430fr"
 
 all: $(filter-out all hosts,$(TOP-TARGETS))
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),,								\
@@ -111,9 +115,14 @@ char16:   MK := host
 char32:   MK := host
 overflow: MK := host
 saturate: MK := host
+sprintf:  MK := host
 megab:    MK := mega
 megaa:    MK := mega
 megam:    MK := mega
+teensy3a: MK := teensy3
+msp430fra:MK := msp430fr
+msp430frb:MK := msp430fr
+msp430frc:MK := msp430fr
 
 metrics::
 	@echo $(wildcard														\

@@ -19,8 +19,9 @@ Tests overview
 	072. char32_t tests
 	080. benchamrking test
 	081. code size metrics
+	100. extensive write_double test
 	101. double/float
-	102. TODO example custom conversion with gcvt
+	102. writing double values
 
 Folder structure
 
@@ -30,8 +31,10 @@ Folder structure
 			*.inc		- test master data
 		bench			- benchmarking tests
 		host			- tests runnable on host only
+		metric			- code size metrics
 		wchar			- wchar tests 
 	./tools				- test environment and tools
+		arduino.cpp		- test runner for Arduino environment
 		common.hpp		- common test environment headers
 		host.hpp		- host-based test environment
 		mcu-env.hpp		- mcu common test environment 
@@ -39,6 +42,8 @@ Folder structure
 		teensy.hpp		- teensy platform specific test environment
 		test.hpp		- test-related headers
 		host.cpp		- test runner for host environment
+		msp430fr.cpp	- test runner for msp430fr* (incomplete)
+		pic32mx.cpp		- test runner for pic32mx* (incomplete)
 
 Building tests for Arduino Mega 
 1. Download and install Arduino Studio https://www.arduino.cc/en/Main/Software
@@ -67,52 +72,52 @@ or
  # make mega metrics
  
 Host (i686 @ 3066 MHz) -O3
-bin/host -b=100000 113
-	'080.cpp:0' "benchmarking: reading single nested property"
-		100000 loops complete in   65 ms
 bin/host -b=100000 114
-	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
-		100000 loops complete in  560 ms
+	'080.cpp:0' "benchmarking: reading single nested property"
+		100000 loops complete in   73 ms
 bin/host -b=100000 115
-	'080.cpp:2' "benchmarking: reading/writing custom type"
-		100000 loops complete in  220 ms
+	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
+		100000 loops complete in  140 ms
 bin/host -b=100000 116
-	'080.cpp:3' "benchmarking: writing Config" (208 JSON entries)
-		100000 loops complete in 1650 ms
+	'080.cpp:2' "benchmarking: reading/writing custom type"
+		100000 loops complete in  240 ms
 bin/host -b=100000 117
+	'080.cpp:3' "benchmarking: writing Config" (208 JSON entries)
+		100000 loops complete in 1500 ms
+bin/host -b=100000 118
 	'080.cpp:4' "benchmarking: reading Config" (60 json entries)
-		100000 loops complete in 2100 ms
+		100000 loops complete in 2300 ms
 
 Teensy3.1 (cortex-m4  @ 72 MHz) -Os
-:113 b
-	'080.cpp:0' "benchmarking: reading single nested property"
-		1000 loops complete in  112 ms
 :114 b
-	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
-		1000 loops complete in  800 ms
+	'080.cpp:0' "benchmarking: reading single nested property"
+		1000 loops complete in  120 ms
 :115 b
-	'080.cpp:2' "benchmarking: reading/writing custom type"
-		1000 loops complete in 2600 ms
+	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
+		1000 loops complete in  652 ms
 :116 b
+	'080.cpp:2' "benchmarking: reading/writing custom type"
+		1000 loops complete in  268 ms
+:117 b
 	'080.cpp:3' "benchmarking: writing Config" (208 JSON entries)
-		1000 loops complete in 1500 ms
+		1000 loops complete in 1378 ms
 :117 b
 	'080.cpp:4' "benchmarking: reading Config" (60 json entries)
-		1000 loops complete in 3200 ms
+		1000 loops complete in 3350 ms
 
 Arduino Mega (atmega2560  @ 16 MHz) -Os
 :0 b
 	'080.cpp:0' "benchmarking: reading single nested property"
-		1000 loops complete in  1200 ms
+		1000 loops complete in  1140 ms
 :1 b
 	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
-		1000 loops complete in  2400 ms
+		1000 loops complete in  5240 ms
 :2 b
 	'080.cpp:2' "benchmarking: reading/writing custom type"
 		1000 loops complete in  7500 ms
 :3 b
 	'080.cpp:3' "benchmarking: writing Config" (208 JSON entries)
-		1000 loops complete in 22000 ms
+		1000 loops complete in 23000 ms
 :4 b
 	'080.cpp:4' "benchmarking: reading Config" (60 json entries)
 		1000 loops complete in 17000 ms

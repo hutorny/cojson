@@ -131,6 +131,8 @@ megaa-OBJS := 																\
   034.o																		\
   035.o																		\
   036.o																		\
+  100.o																		\
+  101.o																		\
 
 mega-OBJS := 																\
   001.o																		\
@@ -143,6 +145,8 @@ mega-OBJS := 																\
   031.o																		\
   032.o																		\
   033.o																		\
+
+100.o : FILE-FLAGS:=-Wno-overflow
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
 METRICS     := $(METRIC-SRCS:.cpp=.size)
@@ -164,7 +168,7 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
 .SUFFIXES:
 .SUFFIXES: .hex .elf .o .size .bin
 
-.SECONDARY: $(TARGET-DIR)/$(TARGET).elf
+.SECONDARY:
 
 $(BASE-DIR)/mega.vars:
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),								\
@@ -181,18 +185,18 @@ $(BASE-DIR)/mega.vars:
 
 %.o: %.c
 	@echo "     $(BOLD)cc$(NORM)" $(notdir $<)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 %.o: %.cpp
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 %.size: %.
 	$(SIZE) $< > $@
 
 %.: %.cpp 00-base.o $(METRIC-OBJS)
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) $(METRIC-FLAGS) -o $@ $(filter-out $@o,$^)
+	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) $(METRIC-FLAGS) -o $@ $(filter-out $@o,$^)
 
 $(TARGET-DIR)/%.elf: $(OBJS) $($(TARGET)-OBJS)
 	@echo "    $(BOLD)ld$(NORM) " $(notdir $@)

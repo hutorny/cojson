@@ -55,14 +55,17 @@ char16-DEFS       := TEST_CHAR16_T
 char32-DEFS       := TEST_CHAR32_T
 overflow-DEFS     := TEST_OVERFLOW_ERROR
 saturate-DEFS     := TEST_OVERFLOW_SATURATE
+sprintf-DEFS      := TEST_WITH_SPRINTF
 
 wchar-INCLUDES    := $(BASE-DIR)/suites/wchar
 char16-INCLUDES   := $(BASE-DIR)/suites/wchar
 char32-INCLUDES   := $(BASE-DIR)/suites/wchar
 overflow-INCLUDES := $(BASE-DIR)/suites/basic
 saturate-INCLUDES := $(BASE-DIR)/suites/basic
+sprintf-INCLUDES  := $(BASE-DIR)/suites/basic
 
 uchar-OBJS        := $(host-OBJS)
+sprintf-OBJS      := $(host-OBJS)
 wchar-OBJS        := 070.o
 char16-OBJS	      := 071.o
 char32-OBJS	      := 072.o
@@ -117,7 +120,7 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS))
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
 	$(CXX) $(CPPFLAGS) -c -o $@ $<
 
-.SECONDARY: $(TARGET-DIR)/$(TARGET).elf
+.SECONDARY:
 
 $(TARGET-DIR)/%: $(OBJS) $($(TARGET)-OBJS)
 	@echo "    $(BOLD)ld$(NORM) " $(notdir $@)

@@ -145,7 +145,8 @@ ARDUINO-OBJS := 															\
   usb_serial.o 																\
   yield.o 																	\
 
-#  memcpy-armv7m.o 															\
+yield.o usb_desc.o DMAChannel.o: FILE-FLAGS:=-Wno-pedantic
+nonstd.o: FILE-FLAGS:=-w
 
 COJSON-OBJS :=																\
   common.o 																	\
@@ -161,10 +162,11 @@ OBJS := 																	\
 
 TESTS-BASIC := $(wildcard $(addprefix $(BASE-DIR)/suites/basic/, *.c *.cpp))
 TESTS-BENCH := $(wildcard $(addprefix $(BASE-DIR)/suites/bench/, *.c *.cpp))
-#TESTS-HOST  := $(wildcard $(addprefix $(BASE-DIR)/suites/host/,  *.c *.cpp))
-TESTS-ALL   := $(notdir $(TESTS-BASIC) $(TESTS-BENCH) $(TESTS-HOST))
+TESTS-HOST  := $(wildcard $(addprefix $(BASE-DIR)/suites/host/,  *.c *.cpp))
+TESTS-ALL   := $(notdir $(TESTS-BASIC) $(TESTS-BENCH))
 
 teensy3-OBJS := $(patsubst %.c,%.o,$(TESTS-ALL:.cpp=.o))
+teensy3a-OBJS := $(patsubst %.c,%.o,$(TESTS-HOST:.cpp=.o))
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
 METRICS     := $(METRIC-SRCS:.cpp=.size)
@@ -176,13 +178,12 @@ METRIC-OBJS := 																\
 vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
 vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
 
-
 .DEFAULT:
 
 .SUFFIXES:
 .SUFFIXES: .hex .elf .o .size
 
-.SECONDARY: $(TARGET-DIR)/$(TARGET).elf
+.SECONDARY:
 
 $(BASE-DIR)/teensy3.vars:
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),								\
@@ -196,22 +197,22 @@ $(BASE-DIR)/teensy3.vars:
 
 %.o: %.c
 	@echo "     $(BOLD)cc$(NORM)" $(notdir $<)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 %.o: %.cpp
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 %.o: %.S
 	@echo "    $(BOLD)asm$(NORM)" $(notdir $<)
-	$(ASM) $(ASMFLAGS) -c -o $@ $<
+	$(ASM) $(ASMFLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 %.size: %.
 	$(SIZE) $< > $@
 
 %.: %.cpp 00-base.o $(METRIC-OBJS)
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) $(METRIC-FLAGS) -o $@ $(filter-out $@o,$^)
+	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) $(METRIC-FLAGS) -o $@ $(filter-out $@o,$^)
 
 $(TARGET-DIR)/%.elf: $(OBJS) $($(TARGET)-OBJS)
 	@echo "    $(BOLD)ld$(NORM) " $(notdir $@)

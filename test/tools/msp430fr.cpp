@@ -24,11 +24,13 @@
 #include "mcu-env.hpp"
 
 #ifndef COJSON_TEST_BUFFER_SIZE
-#	define COJSON_TEST_BUFFER_SIZE (4096)
+#	define COJSON_TEST_BUFFER_SIZE (128)
 #endif
 
 
 namespace cojson {
+
+//
 
 namespace test {
 
@@ -84,12 +86,12 @@ struct DefaultEnvironment : McuEnvironment {
 	}
 	mutable char buff[128];
 	void msg(verbosity lvl, const char *fmt, ...) const noexcept  {
-		if( lvl > options.level ) return;
-		va_list args;
-		va_start(args, fmt);
-		vsprintf(buff, fmt, args);
-		va_end(args);
-		write(buff);
+//		if( lvl > options.level ) return;
+//		va_list args;
+//		va_start(args, fmt);
+//		vsprintf(buff, fmt, args);
+//		va_end(args);
+//		write(buff);
 	}
 
 	virtual void msg(verbosity lvl, master_t master) const noexcept {
@@ -100,16 +102,15 @@ struct DefaultEnvironment : McuEnvironment {
 
 
 	void out(bool success, const char *fmt, ...) const noexcept {
-		if( noout(success, false) ) return;
-		va_list args;
-		va_start(args, fmt);
-		vsprintf(buff, fmt, args);
-		va_end(args);
-		write(buff);
+//		if( noout(success, false) ) return;
+//		va_list args;
+//		va_start(args, fmt);
+//		vsprintf(buff, fmt, args);
+//		va_end(args);
+//		write(buff);
 	}
 	const char* shortname(const char* filename) const noexcept {
-		const char* r;
-		return ((r=strrchr(filename,'/'))) ? ++r : filename;
+		return filename;
 	}
 };
 

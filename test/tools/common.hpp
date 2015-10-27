@@ -165,6 +165,13 @@ namespace cojson {
 		}
 		buffer& output;
 		static Environment& instance() noexcept;
+		inline bool noout(bool success, bool json) const {
+			return
+				options.output == nothing ||
+				(options.output == as_json && ! (json && success) )||
+				(options.output == positive && ! success) ||
+				(options.output == negative && success);
+		}
 	protected:
 		struct {
 			verbosity level;

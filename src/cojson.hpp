@@ -21,8 +21,9 @@
 
 #ifndef COJSON_HPP_
 #define COJSON_HPP_
-#include <type_traits>
-#include <limits>
+#ifndef COJSON_HELPERS_HPP_
+#	include "cojson_helpers.hpp"
+#endif
 #pragma GCC diagnostic ignored "-Wattributes"
 
 namespace cojson {
@@ -66,13 +67,21 @@ namespace cojson {
 		static constexpr enum class temporary_is {
 			_static,	/**	temporary buffer preallocated in static data	*/
 			_automatic	/**	temporary buffer allocated on the stack 		*/
-		} temporary = (sizeof(double) == sizeof(float)) ?
+		} temporary = (sizeof(double) < 8) ?
 		 /* by default temporary buffer is static on low end CPU (AVR 8 bit).
 		  * sizeof(double) is used as indication of lowendness				*/
 			temporary_is::_static : temporary_is::_automatic;
 
 		/** controls size of temporary buffer								*/
 		static constexpr unsigned temporary_size = 24; /* double should fit */
+
+		static constexpr enum class write_double_impl_is {
+			internal,
+			with_sprintf,
+			external
+		} write_double_impl = write_double_impl_is::internal;
+		using write_double_integral_type = uint32_t;
+		static constexpr unsigned write_double_precision = 6;
 	private:
 		default_config();
 	};
@@ -899,45 +908,6 @@ struct reader<bool> {
 	}
 };
 
-/******************************************************************************/
-/* writer's helpers															  */
-
-template<typename T>
-struct numeric_helper_unsigned {
-	/* U - unsigned implementation type, upsized if necessary */
-	typedef typename std::conditional<(sizeof(T)<sizeof(unsigned int)),
-		unsigned int, T>::type U;
-	static constexpr T min = std::numeric_limits<T>::min();
-	static constexpr inline bool is_negative(T) noexcept { return false; }
-	static constexpr inline U abs(T v) noexcept { return v; }
-};
-template<typename T>
-struct numeric_helper_signed {
-	/* U - unsigned implementation type, upsized if necessary */
-	typedef typename std::conditional<(sizeof(T)<sizeof(unsigned int)),
-		unsigned int,typename std::make_unsigned<T>::type>::type U;
-	static constexpr T min = std::numeric_limits<T>::min();
-	static constexpr inline bool is_negative(T v) noexcept { return v < 0; }
-	static constexpr inline U abs(T v) noexcept { return v >= 0 ? v : -v; }
-};
-template<typename T>
-struct numeric_helper : std::conditional<std::is_signed<T>::value,
-	numeric_helper_signed<T>, numeric_helper_unsigned<T>>::type {
-	static_assert(std::is_integral<T>::value, "T is not of integral type");
-	static constexpr T max = std::numeric_limits<T>::max();
-	static inline constexpr T figure(unsigned long long v) noexcept  {
-		return v > static_cast<unsigned long long>(max) / 10ULL ?
-			static_cast<T>(v) : figure(v*10ULL);
-	}
-	static constexpr T pot = figure(10);
-};
-
-/**
- * helper for soft dependency on exp10
- */
-template<typename T>
-T exp_10(short) noexcept;
-
 /**
  * helper for soft dependency on sprintf(...double);
  */
@@ -996,14 +966,7 @@ struct writer<char_t*> {
 
 template<>
 struct writer<double> {
-	static inline bool write(const double& val, ostream& out) noexcept {
-		temporary tmp;
-		if( ! gfmt(tmp.buffer, tmp.size, val) ) {
-			out.error(error_t::overrun);
-			return false;
-		}
-		return out.put(tmp.buffer);
-	}
+	static bool write(const double& val, ostream& out) noexcept;
 };
 
 template<>
@@ -1203,7 +1166,8 @@ private:
  * JSON member - a named element in an object
  */
 struct member {
-	static bool match(const char_t*, const char_t*) noexcept;
+	static bool match(const char_t*, const char_t*) noexcept
+			__attribute__((weak));
 private:
 	template<class C> friend struct property;
 	template<class C> friend struct clas;
