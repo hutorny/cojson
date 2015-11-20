@@ -45,5 +45,7 @@ and [`tutorial`](http://hutorny.in.ua/projects/cojson-tutorial) for more details
 * **Debian** `i686`, `g++-4.9.2`
 * **Arduino Mega** `ATmega2560`, `avr-g++-4.8.1`
 * **Teensy 3.1** `ARM Cortex-M4` `arm-none-eabi-g++-4.8.3`
+  **Carambola2** `Atheros AR9331` `mips-openwrt-linux-g++-4.8.3`
+  **MSP430FR6989** `MSP430FR6989` `msp430-elf-g++-4.9.1`
 
 
