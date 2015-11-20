@@ -45,9 +45,10 @@ INCLUDES := 																\
 
 HOST-TARGETS := host uchar wchar char16 char32 overflow saturate sprintf
 MEGA-TARGETS := mega megaa megab
-MSP430-TARGETS := msp430fr msp430fra msp430frb msp430frc
-TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(MSP430-TARGETS)	\
-               teensy3 teensy3a pic32mx msp430fr
+OPENWRT-TARGETS := openwrt-mips openwrt-mips-uchar
+
+TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(OPENWRT-TARGETS)	\
+               teensy3 teensy3a pic32mx msp430fr 
 
 .PHONY: help
 
@@ -59,8 +60,8 @@ TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(MSP430-TARGETS)	\
 help:
 	@echo
 	@echo "This makefile builds cojson unit tests for various target machines"
-	@echo "Supported machines are: Host, Arduino Mega, Teensy3.1"
-	@echo "Corresponding makefile goals are:$(BOLD)host mega teensy3$(NORM)"
+	@echo "Supported machines are: Host, Arduino Mega, Teensy3.1, OpenWRT"
+	@echo "Corresponding makefile goals are:$(BOLD)host mega teensy3 openwrt-mips msp430fr$(NORM)"
 	@echo "Other top goals covering various aspects:"
 	@echo "    $(BOLD)megaa$(NORM)  - unit tests not included in mega"
 	@echo "    $(BOLD)megab$(NORM)  - benchmarking tests for Arduino Mega"
@@ -77,7 +78,7 @@ help:
 	@echo "    $(BOLD)<goal> clean$(NORM)  - cleans working directory"
 	@echo "    $(BOLD)<goal> rebuild$(NORM)- makes a clean rebuild"
 	@echo "    $(BOLD)<goal> metrics$(NORM)- builds code size metrics for the goal,"
-	@echo "                    one of: mega, teensy3, pic32mx, msp430fr"
+	@echo "                    one of: mega, teensy3, pic32mx, msp430fr, openwrt-mips"
 
 all: $(filter-out all hosts,$(TOP-TARGETS))
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),,								\
@@ -120,9 +121,8 @@ megab:    MK := mega
 megaa:    MK := mega
 megam:    MK := mega
 teensy3a: MK := teensy3
-msp430fra:MK := msp430fr
-msp430frb:MK := msp430fr
-msp430frc:MK := msp430fr
+msp430%:  MK := msp430
+openwrt-mips-uchar: MK := openwrt-mips
 
 metrics::
 	@echo $(wildcard														\
@@ -133,7 +133,6 @@ run::
 	@echo $(wildcard														\
 	  		$(or $(filter-out $@ mega% teensy%, $(MAKECMDGOALS)),			\
 				 $(error Missing top target to run)).metrics.txt)		
-
 
 %:: $(TARGET-DIR) $(BUILD-DIR)
 	@mkdir -p $(BUILD-DIR)/$@
@@ -147,4 +146,6 @@ run::
 		BASE-DIR=$(BASE-DIR)												\
 		SRC-DIRS="$(realpath $(addprefix $(BASE-DIR)/,$(SRC-DIRS)))"		\
 		INCLUDES="$(realpath $(addprefix $(BASE-DIR)/,$(INCLUDES)))"		\
+		BOLD="$(BOLD)"														\
+		NORM="$(NORM)"														\
 

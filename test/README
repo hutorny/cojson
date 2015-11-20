@@ -88,6 +88,24 @@ bin/host -b=100000 118
 	'080.cpp:4' "benchmarking: reading Config" (60 json entries)
 		100000 loops complete in 2300 ms
 
+OpenWrt (AR9330 @ 400 MHz) -O3
+bin/host -b=100000 114
+	'080.cpp:0' "benchmarking: reading single nested property"
+		1000 loops complete in   18 ms
+bin/host -b=100000 115
+	'080.cpp:1' "benchmarking: reading/writing array[3] of double"
+		1000 loops complete in  250 ms
+bin/host -b=100000 116
+	'080.cpp:2' "benchmarking: reading/writing custom type"
+		1000 loops complete in   45 ms
+bin/host -b=100000 117
+	'080.cpp:3' "benchmarking: writing Config" (208 JSON entries)
+		1000 loops complete in  251 ms
+bin/host -b=100000 118
+	'080.cpp:4' "benchmarking: reading Config" (60 json entries)
+		1000 loops complete in  617 ms
+
+
 Teensy3.1 (cortex-m4  @ 72 MHz) -Os
 :114 b
 	'080.cpp:0' "benchmarking: reading single nested property"

@@ -445,6 +445,9 @@ Most critical of possibly missing symbols are <span class="code">__cxa_guard_acq
 and <span class="code">__cxa_guard_release</span>. You may find a simple implementation 
 for them in <span class="code">test/tools/avrcppfix.cpp</span> or use any other
 suitable implementation.</p>
+<p>On some platforms replacing <span class="code">__cxa_pure_virtual</span> with empty implementation saves sufficient 
+amount of program memory. Perhaps this fact is caused by presence of comprehensive diagnostic 
+messages in the built-in function.</p>
 <h3 id="section-5">5. Advanced Topics</h3>
 <p><span class="code">cojson</span> can be easily extended with new functionality that
 your application may need. This is possible along two axes - (1) parsing/serializing
@@ -735,9 +738,9 @@ Array-vector bound to an array property of class Pdo</td></tr>
   struct A {
 	int b;
   } a;};</pre></td><td class="smaller"><pre class="brush: cpp; light: true; title: ; notranslate" title="">NAME(a) NAME(b)
-O&lt;Pdo, M&lt;Pdo,a,Pdo::A,&amp;Pdo::a,
+O&lt;Pdo, P&lt;Pdo,a,Pdo::A,&amp;Pdo::a,
   O&lt;Pdo::A,
-    M&lt;Pdo::A,b,int,&amp;Pdo::A::b&gt;&gt;&gt;&gt;</pre></td><td>
+    P&lt;Pdo::A,b,int,&amp;Pdo::A::b&gt;&gt;&gt;&gt;</pre></td><td>
 Nested object</td></tr>
 <tr><td><pre class="brush: jscript; title: ; notranslate" title="">{&quot;a&quot;:[{&quot;b&quot;:1},
        {&quot;b&quot;:2}]}</pre></td><td><pre class="brush: cpp; light: true; title: ; notranslate" title="">struct Pdo {
@@ -745,9 +748,9 @@ Nested object</td></tr>
     int b;
   } a[2];
 };</pre></td><td class="smaller"><pre class="brush: cpp; light: true; title: ; notranslate" title="">NAME(a) NAME(b)
-O&lt;Pdo, M&lt;Pdo,a,Pdo::A,2,Pdo::a,
+O&lt;Pdo, P&lt;Pdo,a,Pdo::A,2,Pdo::a,
   O&lt;Pdo::A,
-    M&lt;Pdo::A,b,int,&amp;Pdo::A::b&gt;&gt;&gt;&gt;</pre></td><td>
+    P&lt;Pdo::A,b,int,&amp;Pdo::A::b&gt;&gt;&gt;&gt;</pre></td><td>
 Nested array of objects</td></tr>
 <tr><td><pre class="brush: jscript; title: ; notranslate" title="">[{&quot;a&quot;:1},
  {&quot;a&quot;:2}]</pre></td><td><pre class="brush: cpp; light: true; title: ; notranslate" title="">struct Pdo {
@@ -759,7 +762,6 @@ Array of objects</td></tr>
 </table>
 <p><sup id="fn1">1</sup>NAME here is a macro that defines a <span class="term">cojson</span> name</p>
 <pre class="brush: cpp; title: ; notranslate" title="">#define NAME(s) static inline constexpr const char* s() noexcept { return #s; }</pre>
-
 				</div>
 			</div><!-- .post -->
 

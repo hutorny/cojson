@@ -65,7 +65,7 @@ static struct onull : ostream, iostate_v<> {
 	bool put(char_t) noexcept { return true; }
 } out;
 
-static void run(lexer& in, ostream& out) {}
+static void run(lexer&, ostream&) {}
 
 runner empty(run);
 

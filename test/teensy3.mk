@@ -31,8 +31,8 @@ OBJ := @$(PREFIX)objcopy
 SIZE:= @$(PREFIX)size
 BOLD:=$(shell tput bold)
 NORM:=$(shell tput sgr0)
-FIND:= find /opt/gcc$(PREFIX)* \( -readable -or \! -prune \) -type f -name \
-  $(PREFIX)g++$(SUFFIX) | tail -1
+FIND = find /opt/gcc$(PREFIX)* \( -readable -or \! -prune \) \
+  \( -type f -o -type l \) -name  $(PREFIX)g++$(SUFFIX) | tail -1
 
 MAKEFLAGS += --no-builtin-rules
 

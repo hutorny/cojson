@@ -31,7 +31,7 @@ namespace cojson {
 	namespace test {
 
 	static const Test * tests[COJSON_SUITE_SIZE];
-	static unsigned tcount = 0;
+	static int tcount = 0;
 
 	unsigned Test::count() noexcept {
 		return tcount;
@@ -63,9 +63,17 @@ namespace cojson {
 	}
 	int Test::runall(const Environment& env) noexcept {
 		int i = env.getsingle();
-
-		if( i >= 0 )
+		if( tcount <= 0 ) {
+			env.msg(LVL::silent, "No tests available\n");
+			return bad;
+		}
+		if( i >= 0 ) {
+			if( i >= (signed int)tcount ) {
+				env.msg(LVL::silent, "Tests %d not available\n",i);
+				return bad;
+			}
 			env.msg(LVL::normal, "Running test # %d\n", i);
+		}
 		else
 			env.msg(LVL::verbose,"Running %u tests\n",count());
 

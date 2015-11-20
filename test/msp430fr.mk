@@ -1,6 +1,6 @@
 # Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
 #
-# msp430fr.mk - make script to build COJSON Library tests for MSP430FR5849
+# msp430fr.mk - make script to build COJSON Library tests for MSP430FR6989
 #
 # This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
 #
@@ -31,8 +31,9 @@ OBJ := @$(PREFIX)objcopy
 SIZE:= @$(PREFIX)size
 BOLD:=$(shell tput bold)
 NORM:=$(shell tput sgr0)
-FIND:= find /opt/ti \( -readable -or \! -prune \) -type f -name \
-  $(PREFIX)g++$(SUFFIX) | tail -1
+FIND = find /opt/ti \( -readable -or \! -prune \) \
+  \( -type f -o -type l \) -name  $(PREFIX)g++$(SUFFIX) | tail -1
+
 
 MAKEFLAGS += --no-builtin-rules
 
@@ -41,19 +42,25 @@ CXX-FIX := $(realpath $(BASE-DIR)/../include)
 -include $(BASE-DIR)/msp430fr.vars
 export PATH
 
-LDPATH:=$(realpath $($(PREFIX)-PATH)/../)/include
+LDPATH  := $(realpath $($(PREFIX)-PATH)/..)/include
+INCLDIR := $(realpath $($(PREFIX)-PATH)/..)/include
 
 MCU ?= msp430fr6989
 MSP430FLAGS :=																\
   -mmcu=$(MCU)																\
-  -mhwmult=32bit															\
-  -mlarge																	\
-  -mcode-region=lower														\
-  -mdata-region=upper														\
+  -mhwmult=f5series															\
+  -msmall																	\
+  -mcode-region=none														\
+  -mdata-region=none														\
+
+
+CXX-DEFS := 																\
+  COJSON_TEST_OMIT_NAMES													\
+  BENCH_DATA_ATTR='__attribute__((section(".text")))'						\
 
 
 CPPFLAGS += 																\
-  $(addprefix -I,$(CXX-FIX) $(INCLUDES))									\
+  $(addprefix -I,$(INCLDIR) $(CXX-FIX) $(INCLUDES))							\
   $(addprefix -D,$(CXX-DEFS))												\
   $(MSP430FLAGS)															\
   -std=c++1y  																\
@@ -65,18 +72,20 @@ CPPFLAGS += 																\
   -fno-rtti																	\
   -fno-use-cxa-atexit														\
   -fno-check-new															\
+  -fsingle-precision-constant												\
   -ffunction-sections														\
   -fdata-sections															\
   -ffreestanding															\
 
 CFLAGS += 																	\
-  $(addprefix -I,$(INCLUDES))												\
+  $(addprefix -I,$(INCLDIR) $(INCLUDES))									\
   $(addprefix -D,$(CXX-DEFS))												\
   $(MSP430FLAGS)															\
   -std=c11																	\
   -Os 																		\
   -Wall  																	\
   -pedantic																	\
+  -fsingle-precision-constant												\
   -ffunction-sections 														\
   -fdata-sections 															\
   -ffreestanding															\
@@ -84,6 +93,7 @@ CFLAGS += 																	\
 ASMFLAGS :=																	\
   -pedantic																	\
   -fsigned-char																\
+  -fsingle-precision-constant												\
   -ffunction-sections														\
   -fdata-sections															\
   -ffreestanding															\
@@ -91,9 +101,8 @@ ASMFLAGS :=																	\
 
 LDFLAGS +=																	\
   $(CPPFLAGS)																\
-  -T$(LDPATH)/$(MCU).ld														\
   -Xlinker --gc-sections													\
-  -Wl,-s,-relax,-Map,$@.map													\
+  -Wl,-s,-relax,-L$(LDPATH),-Map,$@.map										\
 
 #METRIC-FLAGS +=															\
 
@@ -112,34 +121,49 @@ COJSON-OBJS :=																\
 
 OBJS := 																	\
   $(COJSON-OBJS)															\
-  avrcppfix.o																\
+  msp430cppfix.o															\
+  msp430.o																	\
   msp430fr.o																\
 
-#this set of tests probably exceeds ROM capacity of 32MX130F256B
 msp430fr-OBJS :=															\
+  080.o																		\
+
+msp430fr.001-OBJS :=														\
   001.o																		\
+
+msp430fr.002-OBJS :=														\
   002.o																		\
+
+msp430fr.003-OBJS :=															\
   003.o																		\
+
+msp430fr.004-OBJS :=														\
   004.o																		\
   004.cpp.o																	\
+
+msp430fr.005-OBJS :=														\
   005.o																		\
 
-msp430fra-OBJS :=															\
+msp430fr.030-OBJS :=														\
   030.o																		\
+
+msp430fr.031-OBJS :=														\
   031.o																		\
+
+msp430fr.032-OBJS :=														\
   032.o																		\
 
-msp430frb-OBJS :=															\
-  080.o																		\
-  100.o																		\
-
-msp430frc-OBJS :=															\
+msp430fr.033-OBJS :=														\
   033.o																		\
-  034.o																		\
-  035.o																		\
-  036.o																		\
 
-100.o : FILE-FLAGS:=-Wno-overflow
+msp430fr.034-OBJS :=														\
+  034.o																		\
+
+msp430fr.035-OBJS :=														\
+  035.o																		\
+
+msp430fr.036-OBJS :=														\
+  036.o																		\
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
 # 09-complex-object metric does not fit ROM
@@ -189,22 +213,28 @@ $(TARGET-DIR)/%.hex: $(TARGET-DIR)/%.elf $(BASE-DIR)/msp430fr.vars
 
 $(TARGET): $(TARGET-DIR)/$(TARGET).hex
 
+$(TARGET-DIR)/$(TARGET): $(TARGET-DIR)/$(TARGET).hex
+
 $(BASE-DIR)/msp430fr.metrics.txt: $(METRICS)
 	@head -1 $< > $@
 	@grep -h -v filename  $(sort $^) >> $@
 	@cat $@
 
 $(BASE-DIR)/msp430fr.vars:
+	@echo "Looking for $(BOLD)$(PREFIX)g++$(SUFFIX)$(NORM)..."
 	@echo "# lookup for $(PREFIX)g++$(SUFFIX)" > $@
 	@echo $(if $(shell which $(PREFIX)g++$(SUFFIX)),						\
 		"# found in path\n# "$(shell which $(PREFIX)g++$(SUFFIX)),			\
-		$(PREFIX)-PATH=$(dir $(shell $(FIND)))"\n"							\
-		PATH=$(dir $(shell $(FIND))):$$PATH)  >> $@
+		$(PREFIX)-PATH=$(dir $(shell $(FIND)))"\n"PATH=$(dir $(shell $(FIND))):$$PATH) >> $@
 
-metrics: $(BASE-DIR)/msp430fr.metrics.txt
+metrics:: $(BASE-DIR)/msp430fr.metrics.txt
 
 rebuild: clean $(TARGET)
 
 clean:
-	@rm -f *.o *.map *.size $(TARGET-DIR)/$(TARGET).hex $(TARGET-DIR)/$(TARGET).elf
+	@rm -f *.o *.map *.size													\
+	$(TARGET-DIR)/$(TARGET).*.hex											\
+	$(TARGET-DIR)/$(TARGET).*.elf											\
+	$(TARGET-DIR)/$(TARGET).*.map											\
+
 

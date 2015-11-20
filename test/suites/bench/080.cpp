@@ -47,7 +47,11 @@ static const Config config1 {
 	{}, 9, "Tue Sep  8 06:21:31 2015", 10, { 0.001, 0.01, 0.1 }
 };
 
-static Config080 config2;
+#ifndef BENCH_DATA_ATTR
+#	define BENCH_DATA_ATTR
+#endif
+
+static Config080 config2 BENCH_DATA_ATTR;
 
 static nul nil;
 
@@ -92,7 +96,7 @@ struct Test080 : Test {
 double Test080::data[3] = {0,0,0};
 
 #define COMMA ,
-#define RUN(name, body) Test080(__FILE__,name, \
+#define RUN(name, body) Test080(OMIT(__FILE__),OMIT(name), \
 		[](const Environment& env) noexcept -> result_t body)
 
 Test080 Test080::tests[] = {

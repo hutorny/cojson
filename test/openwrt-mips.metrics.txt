@@ -1,0 +1,15 @@
+   text	   data	    bss	    dec	    hex	filename
+  24453	    184	   1072	  25709	   646d	00-base.
+  26121	    196	   1104	  27421	   6b1d	01-short-value.
+  26121	    196	   1104	  27421	   6b1d	02-long-value.
+  25257	    196	   1104	  26557	   67bd	03-double-value.
+  25445	    196	   1104	  26745	   6879	04-string.
+  26709	    196	   1104	  28009	   6d69	05-vector-of-shorts.
+  27525	    196	   1152	  28873	   70c9	06-object-virt.
+  27969	    196	   1120	  29285	   7265	07-object-pdo.
+  26265	    196	   1104	  27565	   6bad	08-custom-type.
+  52585	    196	   1552	  54333	   d43d	09-complex-object.
+  26557	    196	   1120	  27873	   6ce1	11-short-values.
+  26545	    196	   1120	  27861	   6cd5	12-long-values.
+  25637	    196	   1136	  26969	   6959	13-double-values.
+  25669	    196	   1120	  26985	   6969	14-strings.
