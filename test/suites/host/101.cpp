@@ -21,10 +21,10 @@
 
 #include "test.hpp"
 
-named_static<double,100> d0("D0",12345678.91);
-named_static<double,101> d1("D1",0.00003);
-named_static<float,100> f0("F0",976.54321);
-named_static<float,101> f1("F1",0.0004);
+named_static<double,100> d0(CSTR("D0"),12345678.91);
+named_static<double,101> d1(CSTR("D1"),0.00003);
+named_static<float,100> f0(CSTR("F0"),976.54321);
+named_static<float,101> f1(CSTR("F1"),0.0004);
 
 typedef decltype(d0) D0;
 typedef decltype(d1) D1;
@@ -84,7 +84,7 @@ static inline result_t _R(bool pass, const Environment& env) noexcept {
 	return combine1(pass, error_t::noerror,	env.output.error());
 }
 
-#define RUN(name, body) Test101(__FILE__,name, \
+#define RUN(name, body) Test101(OMIT(__FILE__),OMIT(name), \
 		[](const Environment& env) noexcept -> result_t body)
 Test101 Test101::tests[] = {
 	RUN("double/float by ref", {
@@ -110,7 +110,9 @@ Test101 Test101::tests[] = {
 static const master_t Master[details::countof(Test101::tests)] = {
 	_P_(0), _P_(1), _P_(2), _P_(3), _P_(4)
 };
-#ifdef TEST_WITH_SPRINTF
+#if defined __AVR__
+#	include "101avr.inc"
+#elif defined TEST_WITH_SPRINTF
 #	include "101f.inc"
 #else
 #	include "101.inc"

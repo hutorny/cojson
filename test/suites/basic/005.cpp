@@ -35,8 +35,8 @@ struct Test005 : Test {
 typedef named_static<short, 5> VI;
 typedef named_static<unsigned short, 500> VS;
 
-VI vi("vi", 32567);
-VS vs("vs", 1234);
+VI vi(CSTR("vi"), 32567);
+VS vs(CSTR("vs"), 1234);
 
 
 static inline result_t _R(bool pass, const Environment& env) noexcept {

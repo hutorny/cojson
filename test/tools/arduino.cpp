@@ -294,6 +294,7 @@ struct DefaultEnvironment : McuEnvironment {
 		va_end(args);
 		write(buff);
 	}
+	friend void dbg(const char *fmt, ...);
 	const char* shortname(const char* filename) const noexcept {
 		const char* r;
 		return ((r=strrchr(filename,'/'))) ? ++r : filename;
@@ -422,6 +423,14 @@ ISR(WDT_vect) {
 	if( sp < spmin ) spmin = sp;
 	if( sp < reinterpret_cast<unsigned short>(&__noinit_end))
 		digitalWrite(greenLed, HIGH);
+}
+
+void dbg(const char *fmt, ...) noexcept  {
+	va_list args;
+	va_start(args, fmt);
+	vsprintf(environment.buff, fmt, args);
+	va_end(args);
+	environment.write(environment.buff);
 }
 
 void setup() {

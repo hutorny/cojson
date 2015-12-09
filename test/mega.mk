@@ -56,8 +56,13 @@ CXX-DEFS := 																\
 
 
 CPPFLAGS += 																\
-  $(addprefix -I,$(CXX-FIX) $(INCLUDES) $(VARIANT-DIR) $(ARDUINO-DIR))		\
-  $(addprefix -D,$(CXX-DEFS))												\
+  $(addprefix -I,															\
+      $(CXX-FIX) 															\
+      $($(TARGET)-INCLUDES) 												\
+      $(INCLUDES) 															\
+      $(VARIANT-DIR)														\
+      $(ARDUINO-DIR))														\
+  $(addprefix -D,$($(TARGET)-DEFS) $(CXX-DEFS))								\
   -Wall  																	\
   -Os  																		\
   -fshort-enums  															\
@@ -147,6 +152,26 @@ mega-OBJS := 																\
   032.o																		\
   033.o																		\
 
+megap-OBJS := 																\
+  cojson_progmem.o															\
+  $(mega-OBJS)																\
+
+megaq-OBJS := 																\
+  cojson_progmem.o															\
+  $(megaa-OBJS)																\
+
+megap-DEFS :=																\
+  CSTRING_PROGMEM															\
+
+megaq-DEFS :=																\
+  CSTRING_PROGMEM															\
+
+megap-INCLUDES :=															\
+  $(BASE-DIR)/suites/basic													\
+
+megaq-INCLUDES :=															\
+  $(BASE-DIR)/suites/basic													\
+
 100.o : FILE-FLAGS:=-Wno-overflow
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
@@ -186,11 +211,11 @@ $(BASE-DIR)/mega.vars:
 
 %.o: %.c
 	@echo "     $(BOLD)cc$(NORM)" $(notdir $<)
-	$(CC) $(CFLAGS) $(FILE-FLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(FILE-FLAGS) $($(TARGET)-FLAGS) -c -o $@ $<
 
 %.o: %.cpp
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(FILE-FLAGS) $($(TARGET)-FLAGS) -c -o $@ $<
 
 %.size: %.
 	$(SIZE) $< > $@

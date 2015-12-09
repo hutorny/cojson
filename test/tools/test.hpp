@@ -168,9 +168,55 @@ inline const property<C> & Q() noexcept {
 	return cojson::P<C,id,methods0<C,T,S>>();
 }
 
+template<typename T>
+struct integer_limits_names;
+
+template<>
+struct integer_limits_names<const char*> {
+	static inline const char* min() { return "min"; }
+	static inline const char* max() { return "max"; }
+	static inline const char* pot() { return "pot"; }
+};
+
+template<>
+struct integer_limits_names<const wchar_t*> {
+	static inline const wchar_t* min() { return L"min"; }
+	static inline const wchar_t* max() { return L"max"; }
+	static inline const wchar_t* pot() { return L"pot"; }
+};
+
+template<>
+struct integer_limits_names<const char16_t*> {
+	static inline const char16_t* min() { return u"min"; }
+	static inline const char16_t* max() { return u"max"; }
+	static inline const char16_t* pot() { return u"pot"; }
+};
+template<>
+struct integer_limits_names<const char32_t*> {
+	static inline const char32_t* min() { return U"min"; }
+	static inline const char32_t* max() { return U"max"; }
+	static inline const char32_t* pot() { return U"pot"; }
+};
+
+template<>
+struct integer_limits_names<progmem<char>> {
+	static inline progmem<char> min() {
+		static const char s[] __attribute__((progmem)) ="min";
+		return progmem<char>(s);
+	}
+	static inline progmem<char> max() {
+		static const char s[] __attribute__((progmem)) ="max";
+		return progmem<char>(s);
+	}
+	static inline progmem<char> pot() {
+		static const char s[] __attribute__((progmem)) ="pot";
+		return progmem<char>(s);
+	}
+};
+
 
 template<typename T>
-struct integer_limits {
+struct integer_limits : integer_limits_names<cstring> {
 	typedef T type;
 	static T _min;
 	static T _max;
@@ -179,17 +225,14 @@ struct integer_limits {
 	static inline T& minr() { return _min; }
 	static inline T* minp() { return &_min; }
 	static inline T  ming() { return _min; }
-	static inline const char* min() { return "min"; }
 
 	static inline T& maxr() { return _max; }
 	static inline T* maxp() { return &_max; }
 	static inline T  maxg() { return _max; }
-	static inline const char* max() { return "max"; }
 
 	static inline T& potr() { return _pot; }
 	static inline T* potp() { return &_pot; }
 	static inline T  potg() { return _pot; }
-	static inline const char* pot() { return "pot"; }
 };
 
 template<typename T>
@@ -204,7 +247,7 @@ struct named_static {
 	typedef T type;
 	static T value;
 
-	named_static(const char_t* name, T initial) noexcept {
+	named_static(cstring name, T initial) noexcept {
 		value = initial;
 		sname = name;
 	}
@@ -216,15 +259,15 @@ struct named_static {
 	static inline T* ptr() noexcept { return &value; }
 	static inline T  get() noexcept { return value; }
 	static inline void  set(T v) noexcept { value = v; }
-	static inline const char_t* name() noexcept { return sname; }
+	static inline cstring name() noexcept { return sname; }
 private:
-	static const char_t* sname;
+	static cstring sname;
 };
 
 template<typename T, int any>
 T named_static<T,any>::value;
 template<typename T, int any>
-const char_t* named_static<T,any>::sname;
+cstring named_static<T,any>::sname {nullptr};
 
 template<typename T, int N, int M = 0>
 struct static_string {
@@ -269,7 +312,7 @@ struct sstr : static_string<char_t, 32, M> {
 		self::data[size-1] = 0;
 	}
 	static bool match(const char_t * m) noexcept {
-		return member::match(m, self::data);
+		return details::match(m, self::data);
 	}
 	static result_t run(const Environment& env, const char_t* inp,
 			const char_t* answer, error_t expected = error_t::noerror) noexcept {
@@ -367,6 +410,15 @@ struct register_specifier<char32_t> {
 #define _T_ (_T_ has to be defined in the <test>.cpp file)
 #define _M_(n) template<> const char_t pstring<(_T_+n)>::str[] __attribute__((progmem))
 #define _P_(n) {pstring<(_T_+n)>::str}
+
+#ifdef CSTRING_PROGMEM
+#	include <avr/pgmspace.h>
+#	define CSTR(s) ([]() noexcept -> cstring {						\
+	static constexpr const char l[] __attribute__((progmem))= s;	\
+	return cstring(l); }())
+#else
+#	define CSTR(s) s
+#endif
 
 #ifdef COJSON_TEST_OMIT_NAMES
 #define OMIT(s) (nullptr)

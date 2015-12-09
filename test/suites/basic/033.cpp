@@ -38,9 +38,9 @@ struct Test033 : Test {
 	}
 };
 
-static named_static<unsigned, 33> uint33("uint", 0);
-static named_static<long long, 33> llong("llong", 0LL);
-static named_static<float, 33> dbl("dbl", 0.0);
+static named_static<unsigned, 33> uint33(CSTR("uint"), 0);
+static named_static<long long, 33> llong(CSTR("llong"), 0LL);
+static named_static<float, 33> dbl(CSTR("dbl"), 0.0);
 static static_string<char, 16, 33> str33;
 static static_string<short, 4, 33> ashort;
 static static_string<char, 16, 330> str330;

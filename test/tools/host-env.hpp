@@ -155,7 +155,8 @@ namespace cojson {
 
 		virtual void msg(verbosity lvl, master_t master) const noexcept {
 			if( lvl > options.level ) return;
-			fprintf(stderr, fmt<const char_t*>(), master.data);
+			fputs((const char*)master.data, stderr);
+			fputs("\n",stderr);
 		}
 
 

@@ -572,8 +572,6 @@ This allows to implement better error reporting by overriding iostate::error met
 <tr><td rowspan="2">temporary</td><td>static</td><td>temporary buffer is implemented static</td></tr>
 <tr><td>_automatic</td><td>temporary buffer is implemented automatic (allocated on the stack)</td></tr>
 <tr><td>temporary_size</td><td>&lt;number&gt;</td><td>overrides temporary buffer size</td></tr>
-<tr><td rowspan="2">cstring</td><td>avr_progmem</td><td>use progmem for defining literals and member names (AVR only)</td></tr>
-<tr><td>const_char</td><td>literals and member names are defined constant strings (const char*), default</td></tr>
 </table>
 <h3 id="section-R">Normative References</h3>
 <ol>

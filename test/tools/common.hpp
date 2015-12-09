@@ -377,6 +377,11 @@ namespace cojson {
 }}
 using namespace cojson;
 using namespace test;
-#define NAME(s) static inline constexpr const char_t* s() noexcept {return #s;}
+#ifdef CSTRING_PROGMEM
+#define NAME(s) static inline progmem<char> s() noexcept { \
+		static const char l[] __attribute__((progmem)) = #s; return progmem<char>(l);}
+#else
+#define NAME(s) static inline constexpr const char* s() noexcept {return #s;}
+#endif
 
 #endif /* TOOLS_COMMON_HPP_ */

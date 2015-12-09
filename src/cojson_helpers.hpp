@@ -152,6 +152,47 @@ private:
 template<typename T>
 T exp_10(short) noexcept;
 
+template<typename T>
+class progmem {
+public:
+	explicit inline constexpr progmem(const T* str) noexcept : ptr(str) {}
+	explicit inline constexpr operator const T*() noexcept { return ptr; }
+	inline T operator*() const noexcept { return read(ptr); }
+	inline T operator[](unsigned i) const noexcept { return read(ptr+i); }
+	inline progmem operator++(int) noexcept { return progmem(ptr++); }
+	inline constexpr progmem operator+(unsigned off) noexcept {
+		return progmem(ptr+off);
+	}
+	inline progmem& operator++() noexcept { ++ptr; return *this; }
+private:
+	static T read(const T *ptr) noexcept;
+	const T *ptr;
+};
+
+template<typename A, typename B>
+bool match(A a, B b) noexcept;
+
+template<>
+bool match<const char *, const char*>(const char *, const char*) noexcept;
+
+template<>
+bool match<const wchar_t*, const wchar_t*>(
+		   const wchar_t*, const wchar_t*) noexcept;
+template<>
+bool match<const char16_t*, const char16_t*>(
+		   const char16_t*, const char16_t*) noexcept;
+template<>
+bool match<const char32_t*, const char32_t*>(
+		   const char32_t*, const char32_t*) noexcept;
+
+template<>
+inline bool match<char const*, char*>(char const* a, char* b) noexcept {
+	return match<char const*, const char*>(a,b);
+}
+
+template<>
+bool match<progmem<char>, char const*>(progmem<char> a, char const* b) noexcept;
+
 } // namespace details
 } //namespace cojson
 #endif //COJSON_HELPERS_HPP_

@@ -40,30 +40,33 @@ static inline bool ashex(char16_t v, ostream& out) noexcept {
 } /* avr: 106 bytes */
 
 
+bool writer<const char_t*>::write(char_t chr, ostream& out) noexcept {
+	if( literal::is_control(chr) ) {
+		char_t c = literal::replace_common(chr);
+		if(c != chr ) {
+			return
+				out.put(literal::escape) &&
+				out.put(c);
+		} else {
+			return
+				out.put(literal::escape)   &&
+				out.put(literal::hex_mark) &&
+				ashex(chr, out);
+		}
+	} else {
+		if( literal::is_escaped(chr) ) {
+			out.put(literal::escape);
+		}
+		return out.put(chr);
+	}
+}
+
 bool writer<const char_t*>::write(const char_t * str, ostream& out) noexcept {
 	if( str == nullptr )
 		return value::null(out);
 	bool r = true;
 	if( ! out.put(literal::quotation_mark) ) return false;
-	while( *str && r ) {
-		if( literal::is_control(*str) ) {
-			char_t c = literal::replace_common(*str);
-			if(c != *str ) {
-				r = out.put(literal::escape) &&
-					out.put(c);
-			} else {
-				r =	out.put(literal::escape)   &&
-					out.put(literal::hex_mark) &&
-					ashex(*str, out);
-			}
-		} else {
-			if( literal::is_escaped(*str) ) {
-				r = out.put(literal::escape);
-			}
-			r = r && out.put(*str);
-		}
-		++str;
-	}
+	while( *str && (r=write(*str++,out)) );
 	return r && out.put(literal::quotation_mark);
 } /* avr: 904 bytes */
 
@@ -201,7 +204,7 @@ bool reader<double>::read(double& val, lexer& in) noexcept {
 namespace details {
 
 static constexpr bool is_null(char_t chr) noexcept {
-	return chr == literal::null_l[0];
+	return chr == literal_strings<char_t>::null_l()[0];
 }
 
 struct bstack {
@@ -284,14 +287,14 @@ if( config::config::mismatch != config::config::mismatch_is::error ) {
 			if( ! skip_string(false) )
 				goto abort;					/* malformed string 	*/
 			break;
-		case literal::true_l[0]:
-			if( ! literal(literal::true_l+1) ) goto abort;
+		case literal_strings<char_t>::true_l()[0]:
+			if( ! literal(literal::true_l()+1) ) goto abort;
 			break;
-		case literal::false_l[0]:
-			if( ! literal(literal::false_l+1) ) goto abort;
+		case literal_strings<char_t>::false_l()[0]:
+			if( ! literal(literal::false_l()+1) ) goto abort;
 			break;
-		case literal::null_l[0]:
-			if( ! literal(literal::null_l+1) ) goto abort;
+		case literal_strings<char_t>::null_l()[0]:
+			if( ! literal(literal::null_l()+1) ) goto abort;
 			break;
 		default:
 			goto abort;
@@ -438,7 +441,7 @@ bool lexer::member(char_t*& dst) noexcept {
 char_t lexer::skip_bom() noexcept {
 	char_t chr = 0;
 	ctype ct;
-	const char_t *bom = literal::bom;
+	cstring bom = literal::bom();
 	while( isvalid(ct=get(chr)) && *bom && *bom == chr) ++bom;
 	switch(ct) {
 	case ctype::err: return iostate::err_c;
@@ -446,7 +449,7 @@ char_t lexer::skip_bom() noexcept {
 	default:;
 	}
 	back(chr);
-	return *bom == 0 ? literal::bom[0] : 0;
+	return *bom == 0 ? literal::bom()[0] : 0;
 } /* avr: 132 bytes */
 
 //static inline constexpr bool match_value(int ct, int expected, char_t chr) noexcept {
@@ -468,16 +471,16 @@ ctype lexer::value(ctype expected) noexcept {
 	case literal::quotation_mark:
 		return (expected & ctype::string) != ctype::unknown ?
 				ctype::string : mismatch();
-	case literal::null_l[0]:
+	case literal_strings<char_t>::null_l()[0]:
 		return (expected & ctype::null) != ctype::unknown &&
-				literal(literal::null_l) ? ctype::null : mismatch();
-	case literal::true_l[0]:
+				literal(literal::null_l()) ? ctype::null : mismatch();
+	case literal_strings<char_t>::true_l()[0]:
 		return (expected & ctype::boolean) != ctype::unknown &&
-				literal(literal::true_l) ?
+				literal(literal::true_l()) ?
 					(ctype::boolean|ctype::value) : mismatch();
-	case literal::false_l[0]:
+	case literal_strings<char_t>::false_l()[0]:
 		return (expected & ctype::boolean) != ctype::unknown &&
-				literal(literal::false_l) ? ctype::boolean : mismatch();
+				literal(literal::false_l()) ? ctype::boolean : mismatch();
 	default:
 		ct &= ~(int)ctype::string;
 		ct &= (int)expected;
@@ -485,7 +488,7 @@ ctype lexer::value(ctype expected) noexcept {
 	}
 }
 
-bool lexer::literal(const char_t* str) noexcept {
+bool lexer::literal(cstring str) noexcept {
 	char_t chr;
 	ctype ct;
 	while(*str && isvalid(get(chr))) {
@@ -505,10 +508,10 @@ bool lexer::literal(const char_t* str) noexcept {
 /******************************************************************************/
 namespace details {
 bool value::null(ostream& out) noexcept {
-	return out.put(literal::null_l);
+	return out.puts(literal::null_l());
 }
 
-bool ostream::put(const char_t* s) noexcept {
+bool ostream::puts(const char_t* s) noexcept {
 	while( *s && put(*s++));
 	return *s == 0;
 }

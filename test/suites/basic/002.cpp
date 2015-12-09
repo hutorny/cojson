@@ -39,19 +39,39 @@ static const char* str_get() noexcept {
 static char* str_ptr() noexcept {
 	return str;
 }
+template<typename T = cstring>
+struct names;
 
+template<>
+struct names<const char*> {
+	static const char* strname() noexcept {
+		return "string";
+	}
+	static const char* a() {
+		return "a";
+	}
 
-static const char* strname() noexcept {
-	return "string";
-}
+	static const char* b() {
+		return "b";
+	}
+};
 
-static const char* a() {
-	return "a";
-}
+template<>
+struct names<progmem<char>> {
+	static progmem<char> strname() noexcept {
+		static const char s[] __attribute__((progmem)) = "string";
+		return progmem<char>(s);
+	}
+	static progmem<char> a() {
+		static const char s[] __attribute__((progmem)) = "a";
+		return progmem<char>(s);
+	}
 
-static const char* b() {
-	return "b";
-}
+	static progmem<char> b() {
+		static const char s[] __attribute__((progmem)) = "b";
+		return progmem<char>(s);
+	}
+};
 
 
 static const value& strings() {
@@ -60,7 +80,7 @@ static const value& strings() {
 
 static const value& simple() {
 	return V<
-		M<strname, sizeof(str), str_ptr>
+		M<names<>::strname, sizeof(str), str_ptr>
 	>();
 }
 
@@ -69,7 +89,7 @@ static const value& array2() {
 	return V<
 		V<unsigned, uitem>,
 		V<sizeof(str), str_ptr>,
-		V<M<strname, V<sizeof(str), str_ptr>>>
+		V<M<names<>::strname, V<sizeof(str), str_ptr>>>
 	>();
 }
 
@@ -91,16 +111,16 @@ static const value& array3() {
 	return V<
 		V<unsigned, uitem>,
 		RO<sizeof(str), str_ptr>, //str_set
-		V<M<strname, RO<sizeof(str), str_ptr>>> //str_set
+		V<M<names<>::strname, RO<sizeof(str), str_ptr>>> //str_set
 	>();
 }
 
 
 static const value& complex() {
 	return V<
-		M<a,V<unsigned, uitem>>,
-		M<b,str_get>,
-		M<strname, V<M<a,str_get>>>
+		M<names<>::a,V<unsigned, uitem>>,
+		M<names<>::b,str_get>,
+		M<names<>::strname, V<M<names<>::a,str_get>>>
 	>();
 }
 

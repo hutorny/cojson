@@ -34,6 +34,14 @@ namespace cojson {
 		/** character type: char, wchar_t or char16_t						*/
 		typedef char char_t;
 
+		/** controls where the constant strings are retrieved from */
+		static constexpr enum class cstring_is {
+			const_char, /** default, as provided by compiler  				*/
+			avr_progmem	/** from the program memory.
+			Note! This option for AVR only, all strings are expected to be
+			properly placed in progmem with __attribute__((progmem))		*/
+		} cstring = cstring_is::const_char;
+
 		/** controls behavior on integral overflow 							*/
 		static constexpr enum class overflow_is {
 			ignored, 	/** overflow condition is silently ignored			*/
@@ -331,6 +339,11 @@ namespace details {
 /** JSON char traits. returned by lexer and used by readers */
 static constexpr int bit(int N) noexcept { return 1 << N; }
 
+typedef std::conditional<config::cstring == config::cstring_is::avr_progmem,
+		progmem<char_t>, const char_t*>::type cstring;
+
+typedef std::conditional<config::cstring == config::cstring_is::avr_progmem,
+		progmem<char_t>, char_t>::type char_l;
 
 /******************************************************************************/
 template<typename T>
@@ -339,45 +352,60 @@ struct literal_strings {
 
 template<>
 struct literal_strings<char> {
-	static constexpr const char * null_l	= "null";
-	static constexpr const char * true_l	= "true";
-	static constexpr const char * false_l	= "false";
-	static constexpr const char * bom		= "\xEF\xBB\xBF";
+	static inline constexpr const char * null_l()  noexcept { return "null"; }
+	static inline constexpr const char * true_l()  noexcept { return "true"; }
+	static inline constexpr const char * false_l() noexcept { return "false"; }
+	static inline constexpr const char * bom() noexcept {return "\xEF\xBB\xBF";}
 	/*	https://tools.ietf.org/html/rfc7159#section-8.1
 	 *	Implementations MUST NOT add a byte order mark to the beginning of a
 	 *	JSON text.  In the interests of interoperability, implementations
 	 *	that parse JSON texts MAY ignore the presence of a byte order mark
-	 *	rather than treating it as an error.								  */
+	 *	rather than treating it as an error.								*/
 };
 
 template<>
 struct literal_strings<char16_t> {
-	static constexpr const char16_t * null_l= u"null";
-	static constexpr const char16_t * true_l= u"true";
-	static constexpr const char16_t *false_l= u"false";
-	static constexpr const char16_t * bom	= u"\xFEFF";
+	static inline constexpr const char16_t * null_l()noexcept{return u"null";  }
+	static inline constexpr const char16_t * true_l()noexcept{return u"true";  }
+	static inline constexpr const char16_t *false_l()noexcept{return u"false"; }
+	static inline constexpr const char16_t * bom   ()noexcept{return u"\xFEFF";}
 };
 
 template<>
 struct literal_strings<char32_t> {
-	static constexpr const char32_t * null_l= U"null";
-	static constexpr const char32_t * true_l= U"true";
-	static constexpr const char32_t *false_l= U"false";
-	static constexpr const char32_t * bom	= U"\xFEFF";
+	static inline constexpr const char32_t * null_l()noexcept{return U"null";  }
+	static inline constexpr const char32_t * true_l()noexcept{return U"true";  }
+	static inline constexpr const char32_t *false_l()noexcept{return U"false"; }
+	static inline constexpr const char32_t * bom   ()noexcept{return U"\xFEFF";}
 };
 
 template<>
 struct literal_strings<wchar_t> {
-	static constexpr const wchar_t * null_l = L"null";
-	static constexpr const wchar_t * true_l = L"true";
-	static constexpr const wchar_t *false_l = L"false";
-	static constexpr const wchar_t * bom	= L"\xFEFF";
+	static inline constexpr const wchar_t * null_l()noexcept{ return L"null";  }
+	static inline constexpr const wchar_t * true_l()noexcept{ return L"true";  }
+	static inline constexpr const wchar_t *false_l()noexcept{ return L"false"; }
+	static inline constexpr const wchar_t * bom   ()noexcept{ return L"\xFEFF";}
 };
+
+template<>
+struct literal_strings<progmem<char>> {
+private:
+	static constexpr const char _null_l[] = "null";
+	static constexpr const char _true_l[] = "true";
+	static constexpr const char _false_l[]= "false";
+	static constexpr const char _bom[]    = "\xEF\xBB\xBF";
+public:
+	static inline constexpr progmem<char> null_l() noexcept { return progmem<char>( _null_l ); };
+	static inline constexpr progmem<char> true_l() noexcept { return progmem<char>(  _true_l ); }
+	static inline constexpr progmem<char> false_l() noexcept { return progmem<char>(  _false_l ); }
+	static inline constexpr progmem<char> bom() noexcept { return progmem<char>(  _bom ); }
+};
+
 
 /**
  * list of JSON literals.
  */
-struct literal : literal_strings<char_t> {
+struct literal : literal_strings<char_l> {
 	//https://tools.ietf.org/html/rfc7159#section-2
 	static constexpr char_t begin_array 	= '['; /** [ left square bracket  */
 	static constexpr char_t begin_object    = '{'; /** { left curly bracket   */
@@ -471,7 +499,7 @@ typedef const member& (*node)();
 /**
  * name type - a function returning pointer to a name
  */
-typedef const char_t* (*name)();
+typedef cstring (*name)();
 
 /**
  * Error codes
@@ -512,6 +540,10 @@ static inline constexpr error_t operator~(error_t a) noexcept {
 static inline error_t & operator|=(error_t & a, error_t b) noexcept {
 	*reinterpret_cast<unsigned char*>(&a) |= static_cast<unsigned char>(b);
     return a;
+}
+
+static inline constexpr unsigned char operator+(error_t v) noexcept {
+	return static_cast<unsigned char>(v);
 }
 
 template<config::iostate_is V = config::iostate>
@@ -586,8 +618,19 @@ struct ostream : virtual iostate {
 	 * writes a zero-terminated string to the stream.
 	 * returns true on success or false on error
 	 */
-	bool put(const char_t* s) noexcept;
+	inline bool put(const char_t* s) noexcept { return puts(s); }
+	bool puts(const char_t* s) noexcept;
+	template<class C>
+	bool puts(C s) noexcept;
 };
+
+template<>
+bool ostream::puts<progmem<char>>(progmem<char>) noexcept;
+
+template<>
+inline bool ostream::puts<char_t*>(char_t* v) noexcept {
+	return puts(const_cast<const char_t*>(v));
+}
 
 template<size_t N, config::temporary_is = config::temporary>
 struct temporary_s {
@@ -644,6 +687,10 @@ enum class ctype : int {
 };
 
 ctype chartype(char_t) noexcept;
+
+static inline constexpr int operator+(ctype v) noexcept {
+	return static_cast<int>(v);
+}
 
 static inline constexpr ctype operator&(ctype a, ctype b) noexcept {
 	return static_cast<ctype>(static_cast<int>(a) & static_cast<int>(b));
@@ -775,7 +822,7 @@ struct lexer : noncopyable {
 	}
 
 	static constexpr bool is_null(char_t chr) noexcept {
-		return chr == literal::null_l[0];
+		return chr == literal_strings<char_t>::null_l()[0];
 	}
 
 private:
@@ -783,7 +830,7 @@ private:
 	ctype unhex(char_t& chr) noexcept;
 	ctype get(char_t& dst) noexcept;
 	bool skip_member(bool first) noexcept;
-	bool literal(const char_t*) noexcept;
+	bool literal(cstring) noexcept;
 	static inline constexpr bool is_valid(int ct) noexcept {
 		return cojson::details::isvalid(static_cast<ctype>(ct));
 	}
@@ -955,6 +1002,12 @@ struct writer {
 template<>
 struct writer<const char_t*> {
 	static bool write(const char_t*, ostream&) noexcept;
+	static bool write(char_t, ostream&) noexcept;
+};
+
+template<>
+struct writer<progmem<char_t>> {
+	static bool write(progmem<char_t> s, ostream& o) noexcept;
 };
 
 template<>
@@ -979,7 +1032,7 @@ struct writer<float> {
 template<>
 struct writer<bool> {
 	static inline bool write(bool val, ostream& out) noexcept {
-		return out.put(val ? literal::true_l : literal::false_l);
+		return out.puts(val ? literal::true_l() : literal::false_l());
 	}
 };
 
@@ -997,6 +1050,8 @@ static inline constexpr size_t countof(T (&)[N]) noexcept  { return N; }
 
 } /* namespace details */
 using lexer = details::lexer;
+using cstring = details::cstring;
+
 namespace details {
 /**
  * Generic JSON value
@@ -1166,26 +1221,24 @@ private:
  * JSON member - a named element in an object
  */
 struct member {
-	static bool match(const char_t*, const char_t*) noexcept
-			__attribute__((weak));
 private:
 	template<class C> friend struct property;
 	template<class C> friend struct clas;
 	friend class object;
 
-	virtual const char_t* name() const noexcept = 0;
+	virtual cstring name() const noexcept = 0;
 	virtual bool readval(lexer&) const noexcept = 0;
 	virtual bool writeval(ostream&) const noexcept = 0;
 
-	static inline bool prolog(const char_t* name, ostream& out) noexcept {
-		return writer<const char_t*>::write(name, out)
+	static inline bool prolog(cstring name, ostream& out) noexcept {
+		return writer<cstring>::write(name, out)
 			&& out.put(literal::name_separator);
 	}
 	inline bool prolog(ostream& out) const noexcept {
 		return prolog(name(), out);
 	}
 	inline bool match(const char_t* aname) const noexcept {
-		return match(name(),aname);
+		return details::match(name(),aname);
 	}
 };
 
@@ -1221,11 +1274,11 @@ struct property : noncopyable {
 	 * high connection to the class instance
 	 */
 	typedef const property& (*node)();
-	virtual const char_t* name() const noexcept = 0;
+	virtual cstring name() const noexcept = 0;
 	virtual bool read(C& obj, lexer&) const noexcept = 0;
 	virtual bool write(const C& obj, ostream&) const noexcept = 0;
 	inline bool match(const char_t* aname) const noexcept {
-		return member::match(name(),aname);
+		return details::match(name(),aname);
 	}
 	static inline bool constexpr null(C&) noexcept {
 		return false; /* not possible to nullify */
@@ -1516,7 +1569,7 @@ struct objects
 template<class C, details::name id, typename T, T C::*V>
 const details::property<C> & P() noexcept {
 	static const struct local : details::propertyx<accessor::field<C,T,V>> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 	} l;
 	return l;
 }
@@ -1527,7 +1580,7 @@ const details::property<C> & P() noexcept {
 template<class C, details::name id, class X>
 const details::property<C> & P() noexcept {
 	static const struct local : details::propertyx<X> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 	} l;
 	return l;
 }
@@ -1538,7 +1591,7 @@ const details::property<C> & P() noexcept {
 template<class C, details::name id, size_t N, char_t (C::*M)[N]>
 const details::property<C> & P() noexcept {
 	static const struct local : details::property<C> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
 			return details::reader<char_t*>::read(obj.*M, N, in);
 		}
@@ -1555,7 +1608,7 @@ const details::property<C> & P() noexcept {
 template<class C, details::name id, typename T, size_t N, T (C::*M)[N]>
 const details::property<C>& P() {
 	static const struct local : details::property<C> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
 			return details::collection<>::read(*this, obj, in);
 		}
@@ -1585,7 +1638,7 @@ const details::property<C>& P() {
 template<class C,details::name id,class T,T C::*V,const details::clas<T>& S()>
 const details::property<C> & P() {
 	static const struct local : details::property<C> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
 			return S().read(obj.*V, in);
 		}
@@ -1603,7 +1656,7 @@ template<class C, details::name id, class T,
 	size_t N, T (C::*V)[N], const details::clas<T>& S()>
 const details::property<C> & P() {
 	static const struct local : details::property<C> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
 			return details::collection<>::read(*this, obj, in);
 		}
@@ -1770,7 +1823,7 @@ const details::value& V() noexcept {
 template<details::name id, details::item I>
 const details::member& M() noexcept {
 	static const struct local : details::member {
-		const char* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return I().read(in);
 		}
@@ -1788,7 +1841,7 @@ template<details::name id, size_t N, char_t* (*F)() noexcept>
 const details::member& M() noexcept {
 	static const struct local : details::member, details::string {
 		inline local() noexcept : details::string(F(),N) {}
-		const char* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept { return read(in); }
 		bool writeval(details::ostream& out) const noexcept { return write(out); }
 	} l;
@@ -1802,7 +1855,7 @@ template<details::name id, const char_t* (*F)() noexcept>
 const details::member& M() noexcept {
 	static const struct local : details::member, details::string {
 		inline local() noexcept : details::string(F()) {}
-		const char* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return read(in);
 		}
@@ -1820,7 +1873,7 @@ const details::member& M() noexcept {
 template<details::name id, class X>
 const details::member& M() noexcept {
 	static const struct local : details::member, details::values<X> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return details::values<X>::read(in);
 		}
@@ -1837,7 +1890,7 @@ const details::member& M() noexcept {
 template<details::name id, typename T, T& (*F)() noexcept>
 const details::member& M() noexcept {
 	static const struct local : details::member, details::values<accessor::reference<T,F>> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return details::values<accessor::reference<T,F>>::read(in);
 		}
@@ -1855,7 +1908,7 @@ template<details::name id, typename T, T* P>
 const details::member& M() noexcept {
 	static const struct local : details::member,
 		details::scalar<accessor::pointer<T,P>> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return details::scalar<accessor::pointer<T,P>>::read(in);
 		}
@@ -1874,7 +1927,7 @@ template<details::name id, typename T, T* (*F)() noexcept>
 const details::member& M() noexcept {
 	static const struct local : details::member,
 		details::scalar<accessor::function<T,F>> {
-		const char_t* name() const noexcept { return id(); }
+		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
 			return details::scalar<accessor::function<T,F>>::read(in);
 		}

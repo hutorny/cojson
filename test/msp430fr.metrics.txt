@@ -3,13 +3,13 @@
    1926	    638	     72	   2636	    a4c	01-short-value.
    2116	    638	     74	   2828	    b0c	02-long-value.
   11548	    906	     78	  12532	   30f4	03-double-value.
-   3226	    638	     74	   3938	    f62	04-string.
+   3230	    638	     74	   3942	    f66	04-string.
    3348	    638	     72	   4058	    fda	05-vector-of-shorts.
-   4416	    682	    104	   5202	   1452	06-object-virt.
-   4244	    658	     92	   4994	   1382	07-object-pdo.
+   4420	    682	    104	   5206	   1456	06-object-virt.
+   4248	    658	     92	   4998	   1386	07-object-pdo.
    2926	    638	     70	   3634	    e32	08-custom-type.
-  19586	   1546	    440	  21572	   5444	09-complex-object.
+  19590	   1546	    440	  21576	   5448	09-complex-object.
    2032	    646	     84	   2762	    aca	11-short-values.
    2316	    646	     88	   3050	    bea	12-long-values.
   11628	    914	     96	  12638	   315e	13-double-values.
-   3284	    638	     88	   4010	    faa	14-strings.
+   3288	    638	     88	   4014	    fae	14-strings.

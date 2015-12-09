@@ -47,6 +47,45 @@ struct string_helper<T,true> {
 	}
 };
 
+template<>
+bool match<const wchar_t*,   const wchar_t*>(
+		   const wchar_t* a, const wchar_t* b) noexcept {
+	return string_helper<const wchar_t*>::match(a,b);
+}
+
+template<>
+bool match<const char16_t*,   const char16_t*>(
+		   const char16_t* a, const char16_t* b) noexcept {
+	return string_helper<const char16_t*>::match(a,b);
+}
+
+template<>
+bool match<const char32_t*,   const char32_t*>(
+		   const char32_t* a, const char32_t* b) noexcept {
+	return string_helper<const char32_t*>::match(a,b);
+}
+
+template<>
+bool match<const char*, const char*>(const char* a, const char* b) noexcept {
+	return string_helper<const char*>::match(a,b);
+}
+
+template<>
+bool match<const wchar_t*, wchar_t*>(const wchar_t * a, wchar_t* b) noexcept {
+	return string_helper<const wchar_t*>::match(a,b);
+}
+
+template<>
+bool match<const char16_t*, char16_t*>(const char16_t * a, char16_t* b) noexcept {
+	return string_helper<const char16_t*>::match(a,b);
+}
+
+template<>
+bool match<const char32_t*, char32_t*>(const char32_t * a, char32_t* b) noexcept {
+	return string_helper<const char32_t*>::match(a,b);
+}
+
+
 template<typename C, typename T,
 	bool hasswprintf = has_swprintf<T,C>::value,
 	bool hassnprintf = has_snprintf<T,C>::value,
@@ -142,10 +181,6 @@ float exp_10<float>(short n) noexcept {
 	return exp10_helper<float>::calc(n);
 }
 
-bool member::match(const char_t* a, const char_t* b) noexcept {
-	return string_helper<const char_t*>::match(a,b);
-}
-
 template<>
 bool gfmt<char_t*, double>(char_t* buf, size_t size, double val) noexcept {
 	return any<char_t>::gfmt(buf, size, val);
@@ -169,7 +204,7 @@ inline bool write_double_impl<impl_is::with_sprintf>(
 		out.error(error_t::overrun);
 		return false;
 	}
-	return out.put(tmp.buffer);
+	return out.puts(tmp.buffer);
 }
 
 bool writer<double>::write(const double& val, ostream& out) noexcept {

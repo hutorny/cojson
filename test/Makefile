@@ -44,7 +44,7 @@ INCLUDES := 																\
   suites/include															\
 
 HOST-TARGETS := host uchar wchar char16 char32 overflow saturate sprintf
-MEGA-TARGETS := mega megaa megab
+MEGA-TARGETS := mega megaa megab megap megaq
 OPENWRT-TARGETS := openwrt-mips openwrt-mips-uchar
 
 TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(OPENWRT-TARGETS)	\
@@ -65,6 +65,8 @@ help:
 	@echo "Other top goals covering various aspects:"
 	@echo "    $(BOLD)megaa$(NORM)  - unit tests not included in mega"
 	@echo "    $(BOLD)megab$(NORM)  - benchmarking tests for Arduino Mega"
+	@echo "    $(BOLD)megap$(NORM)  - mega unit tests with literals in progmem"
+	@echo "    $(BOLD)megaq$(NORM)  - megaa unit tests with literals in progmem"
 	@echo "    $(BOLD)teensy3a$(NORM)-unit tests not included in teensy3"
 	@echo "    $(BOLD)uchar$(NORM)  - host tests for unsigned char"
 	@echo "    $(BOLD)wchar$(NORM)  - host tests for wchar_t"
@@ -119,7 +121,8 @@ saturate: MK := host
 sprintf:  MK := host
 megab:    MK := mega
 megaa:    MK := mega
-megam:    MK := mega
+megap:    MK := mega
+megaq:    MK := mega
 teensy3a: MK := teensy3
 msp430%:  MK := msp430
 openwrt-mips-uchar: MK := openwrt-mips
