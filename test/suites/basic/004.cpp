@@ -86,12 +86,12 @@ static const clas<CPod>& dpodo() {
 
 struct Test004 : Test {
 	static Test004 tests[];
-	inline Test004(const char * name, const char * desc, runner func)
+	inline Test004(cstring name, cstring desc, runner func)
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 
@@ -123,13 +123,13 @@ Test004 Test004::tests[] = {
 #undef _T_
 #define _T_ (400)
 
-static const master_t Master[details::countof(Test004::tests)] = {
+static cstring const Master[details::countof(Test004::tests)] = {
 	 _P_(0), _P_(1), _P_(2), _P_(3), _P_(4), _P_(5), _P_(6)
 };
 
 #include "004.inc"
 
-const master_t Test004::master() const noexcept {
+cstring Test004::master() const noexcept {
 	return Master[index()];
 }
 

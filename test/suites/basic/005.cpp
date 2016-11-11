@@ -24,12 +24,12 @@
 
 struct Test005 : Test {
 	static Test005 tests[];
-	inline Test005(const char * name, const char * desc, runner func)
+	inline Test005(cstring name, cstring desc, runner func)
 		noexcept : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 typedef named_static<short, 5> VI;
@@ -62,13 +62,13 @@ Test005 Test005::tests[] = {
 #define _T_ (500)
 
 
-static const master_t Master[details::countof(Test005::tests)] = {
+static cstring const Master[details::countof(Test005::tests)] = {
 	 _P_(0), _P_(1), _P_(2)
 };
 
 #include "005.inc"
 
-const master_t Test005::master() const noexcept {
+cstring Test005::master() const noexcept {
 	return Master[index()];
 }
 

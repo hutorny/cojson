@@ -28,7 +28,7 @@ static constexpr const bool low_end = sizeof(double) < 8;
 
 struct Test100 : Test {
 	static Test100 tests[];
-	inline Test100(const char * name, const char * desc, runner func)
+	inline Test100(tstring name, tstring desc, runner func)
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
@@ -38,11 +38,11 @@ struct Test100 : Test {
 using namespace floating;
 using namespace details;
 
-static test_buffer<32> out;
-
 static result_t test_conversion(const Environment& env, double val,
 		int precision) noexcept {
-	out.restart();
+	char buff[32];
+	buffer out(buff);
+	//out.restart();
 	serialize(val, out, precision);
 	out.put(0);
 	double check = atof(out.begin());
@@ -94,10 +94,10 @@ static result_t runtests(const Environment& env) noexcept  {
 	return result;
 }
 
-#define RUN(name, body) Test100(__FILE__,name, \
+#define RUN(name, body) Test100(OMIT(__FILE__),OMIT(name), \
 		[](const Environment& env) noexcept -> result_t body)
 
 Test100 Test100::tests[] = {
-	Test100(__FILE__,"cojson float conversion", runtests)
+	Test100(OMIT(__FILE__),OMIT("cojson float conversion"), runtests)
 };
 }}

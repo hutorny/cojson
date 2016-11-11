@@ -24,7 +24,7 @@
 
 struct Test030 : Test {
 	static Test030 tests[];
-	inline Test030(const char * name, const char * desc, runner func) noexcept
+	inline Test030(cstring name, cstring desc, runner func) noexcept
 		: Test(name, desc, func) {}
 	int index() const noexcept  {
 		return (this-tests);
@@ -36,7 +36,7 @@ template<typename T>
 struct plain {
 	static T value;
 	static void set(T val) noexcept { value = val; }
-	static result_t run(const Environment& env, const char* data,
+	static result_t run(const Environment& env, cstring data,
 			T answer, error_t expected = error_t::noerror)
 		noexcept  {
 		value = 0;
@@ -46,7 +46,7 @@ struct plain {
 		env.out(r && m, fmt<T>(), value);
 		return combine2(r, m, test::json().error() xor expected);
 	}
-	static result_t run2(const Environment& env, const char* data,
+	static result_t run2(const Environment& env, cstring data,
 			T answer, error_t expected = error_t::noerror)
 		noexcept  {
 		value = 0;
@@ -79,36 +79,37 @@ constexpr bool plain<float>::eq(const float& a, const float& b) noexcept {
 		[](const Environment& env) noexcept -> result_t body)
 Test030 Test030::tests[] = {
 	RUN("parsing plain values: char", {
-		return plain<signed char>::run(env, "125", 125);					}),
+		return plain<signed char>::run(env, CSTR("125"), 125);				}),
 	RUN("parsing plain values: unsigned char", {
-		return plain<unsigned char>::run(env, "255", 255);					}),
+		return plain<unsigned char>::run(env, CSTR("255"), 255);			}),
 	RUN("parsing plain values: short", {
-		return plain<short>::run2(env, "-32000", -32000);					}),
+		return plain<short>::run2(env, CSTR("-32000"), -32000);				}),
 	RUN("parsing plain values: unsigned short", {
-		return plain<unsigned short>::run(env, "65000", 65000);				}),
+		return plain<unsigned short>::run(env, CSTR("65000"), 65000);		}),
 	RUN("parsing plain values: int", {
-		return plain<long>::run(env, "1000000", 1000000L);					}),
+		return plain<long>::run(env, CSTR("1000000"), 1000000L);			}),
 	RUN("parsing plain values: unsigned long long", {
 		return plain<unsigned long long>::run(
-				env, "10900900900900900900", 10900900900900900900ULL);		}),
+				env, CSTR("10900900900900900900"), 10900900900900900900ULL);}),
 	RUN("parsing plain values: float", {
-			return plain<float>::run(env, "1.5", 1.5);						}),
+			return plain<float>::run(env, CSTR("1.5"), 1.5);				}),
 	RUN("parsing plain values: float with exp", {
-			return plain<float>::run(env, "1.5e3", 1.5e3);					}),
+			return plain<float>::run(env, CSTR("1.5e3"), 1.5e3);			}),
 	RUN("parsing plain values: float with -exp", {
-			return plain<float>::run(env, "2.7E-3", 2.7e-3);				}),
+			return plain<float>::run(env, CSTR("2.7E-3"), 2.7e-3);			}),
 	RUN("parsing plain values: negative float", {
-			return plain<float>::run(env, "-3.141528", -3.141528);			}),
+			return plain<float>::run(env, CSTR("-3.141528"), -3.141528);	}),
 	RUN("parsing plain values: int + trailing spaces", {
-		return plain<int>::run(env, "4\n ", 4);								}),
+		return plain<int>::run(env, CSTR("4\n "), 4);						}),
 	RUN("parsing plain values: short w/ excessive element", {
-		return plain<short>::run(env, "400 500", 400);						}),
+		return plain<short>::run(env, CSTR("400 500"), 400);				}),
 	RUN("parsing plain values: long w/ excessive null", {
-		return plain<long>::run(env, "800 null", 800);						}),
+		return plain<long>::run(env, CSTR("800 null"), 800);				}),
 	RUN("parsing plain values: long mismatching to null", {
-		return plain<long>::run(env, "null 900", 0, error_t::mismatch);		}),
+		return plain<long>::run(env, CSTR("null 900"), 0, error_t::mismatch);}),
 	RUN("parsing plain values: int mismatching to string", {
-		return plain<int>::run(env, "\"null\" 900", 0, error_t::mismatch);		}),
+		return plain<int>::run(env, CSTR("\"null\" 900"), 0,
+													error_t::mismatch);		}),
 };
 
 

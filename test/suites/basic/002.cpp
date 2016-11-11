@@ -127,12 +127,12 @@ static const value& complex() {
 
 struct Test002 : Test {
 	static Test002 tests[];
-	inline Test002(const char * name, const char * desc, runner func)
+	inline Test002(cstring name, cstring desc, runner func)
 		noexcept : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 
@@ -166,13 +166,13 @@ Test002 Test002::tests[] = {
 #undef _T_
 #define _T_ (200)
 
-static const master_t Master[details::countof(Test002::tests)] = {
+static cstring const Master[details::countof(Test002::tests)] = {
 	 _P_(0), _P_(1), _P_(2), _P_(3), _P_(4), _P_(5), _P_(6)
 };
 
 #include "002.inc"
 
-const master_t Test002::master() const noexcept {
+cstring Test002::master() const noexcept {
 	return Master[index()];
 }
 

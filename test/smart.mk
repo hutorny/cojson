@@ -1,6 +1,7 @@
-# Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+# Copyright (C) 2016 Eugene Hutorny <eugene@hutorny.in.ua>
 #
-# mega.mk - make script to build COJSON Library tests for Arduino Mega
+# smart.mk - make script to build COJSON Library tests for 
+#			Mediatek Smart Linkit 7688
 #
 # This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
 #
@@ -22,6 +23,8 @@
 # variable expected from the outer Makefile: 
 # BASE-DIR SRC-DIRS INCLUDES TARGET TARGET-DIR
 
+#/opt/arduino-1.6.4/hardware/tools/avr/bin/avr-g++ -c -g -Os -w -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD -mmcu=atmega32u4 -DF_CPU=8000000L -DARDUINO=10604 -DARDUINO_AVR_LINKITSMART7688 -DARDUINO_ARCH_AVR -DUSB_VID=0x0E8D -DUSB_PID=0xAB01 -DUSB_MANUFACTURER="MediaTek Labs" -DUSB_PRODUCT="LinkIt Smart 7688 Duo" -I/opt/arduino-1.6.4/hardware/arduino/avr/cores/arduino -I/home/eugene/.arduino15/packages/LinkIt/hardware/avr/0.1.5/variants/smart7688
+#/opt/arduino-1.6.4/hardware/tools/avr/bin/avr-objcopy -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 /tmp/build2100887461208674711.tmp/sketch_jun20a.cpp.elf
 PREFIX ?= avr-
 CC  := @$(PREFIX)gcc$(SUFFIX)
 CXX := @$(PREFIX)g++$(SUFFIX)
@@ -33,25 +36,30 @@ NORM:=$(shell tput sgr0)
 FIND = find /opt/arduino* \( -readable -or \! -prune \) \
   \( -type f -o -type l \) -name  $(PREFIX)g++$(SUFFIX) | tail -1
 
-
 CXX-FIX := $(realpath $(BASE-DIR)/../include)
 MAKEFLAGS += --no-builtin-rules
 
--include $(BASE-DIR)/mega.vars
+-include $(BASE-DIR)/smart.vars
 export PATH
 
 AVRDUDE_FLAGS +=															\
   -D																		\
   -C/etc/avrdude.conf														\
-  -patmega2560																\
+  -patmega32u4																\
   -cwiring																	\
   -b115200																	\
   $(if $(AVRDUDE_PORT),-P $(AVRDUDE_PORT))									\
 
 CXX-DEFS := 																\
-  ARDUINO=164																\
-  F_CPU=16000000UL															\
-  COJSON_SUITE_SIZE=100														\
+  ARDUINO_AVR_LINKITSMART7688												\
+  ARDUINO_ARCH_AVR															\
+  ARDUINO=10604																\
+  F_CPU=8000000L															\
+  COJSON_SUITE_SIZE=4														\
+  USB_VID=0x0E8D															\
+  USB_PID=0xAB01															\
+  USB_MANUFACTURER="\"MediaTek Labs\""										\
+  USB_PRODUCT="\"LinkIt Smart 7688 Duo\""									\
 
 CPPFLAGS += 																\
   $(addprefix -I,															\
@@ -69,8 +77,8 @@ CPPFLAGS += 																\
   -funsigned-bitfields  													\
   -fno-exceptions  															\
   -fno-threadsafe-statics													\
-  -std=c++1y  																\
-  -mmcu=atmega2560 															\
+  -std=c++11  																\
+  -mmcu=atmega32u4 															\
 
 
 CFLAGS += 																	\
@@ -83,18 +91,21 @@ CFLAGS += 																	\
   -ffunction-sections 														\
   -fdata-sections 															\
   -funsigned-bitfields 														\
-  -mmcu=atmega2560															\
+  -mmcu=atmega32u4															\
 
 
 LDFLAGS +=																	\
   -Wl,-Map,$(TARGET).map,--cref 											\
   -mrelax 																	\
   -Wl,--gc-sections			 												\
-  -mmcu=atmega2560															\
+  -mmcu=atmega32u4															\
 
 
 OFLAGS +=																	\
-  -R .eeprom 																\
+  -j .eeprom 																\
+  --set-section-flags=.eeprom=alloc,load									\
+  --no-change-warnings														\
+  --change-section-lma .eeprom=0											\
   -R .fuse 																	\
   -R .lock 																	\
   -R .signature 															\
@@ -103,18 +114,36 @@ OFLAGS +=																	\
 
 SFLAGS := 																	\
   --format=avr																\
-  --mcu=atmega2560															\
-
+  --mcu=atmega32u4															\
 
 ARDUINO-OBJS := 															\
   HardwareSerial.o															\
-  HardwareSerial0.o															\
+  HardwareSerial1.o															\
   Print.o																	\
-  hooks.o																	\
   main.o																	\
   wiring.o																	\
   wiring_digital.o															\
+  hooks.o																	\
+  WInterrupts.o																\
+  abi.o																		\
 
+#  CDC.o																		\
+
+#  HID.o																		\
+#  USBCore.o																	\
+
+#  wiring_analog.o															\
+#  wiring_pulse.o															\
+#  wiring_shift.o															\
+#  HardwareSerial1.o															\
+#  HardwareSerial2.o															\
+#  HardwareSerial3.o															\
+
+#  IPAddress.o
+#  new.o
+#  Tone.o
+#  WMath.o
+#  WString.o
 
 COJSON-OBJS :=																\
   common.o 																	\
@@ -124,76 +153,49 @@ COJSON-OBJS :=																\
 OBJS :=																		\
   $(COJSON-OBJS)															\
   $(ARDUINO-OBJS)															\
-  arduino.o 																\
   avrcppfix.o 																\
   chartypetable_progmem.o													\
-
-megab-OBJS := 																\
-  080.o																		\
   cojson_progmem.o															\
 
-megaa-OBJS := 																\
-  032.o																		\
-  033.o																		\
-  034.o																		\
-  035.o																		\
-  036.o																		\
-  100.o																		\
-  101.o																		\
-
-mega-OBJS := 																\
+smart-OBJS := 																\
+  smart.o 																	\
   001.o																		\
   002.o																		\
+
+smarta-OBJS := 																\
+  smart.o 																	\
   003.o																		\
-  004.o																		\
-  004.cpp.o																	\
-  005.o																		\
-  030.o																		\
-  031.o																		\
 
-megap-OBJS := 																\
-  cojson_progmem.o															\
-  $(mega-OBJS)																\
+smartb-OBJS := 																\
+  smart.o 																	\
+  080.o																		\
 
-megaq-OBJS := 																\
-  cojson_progmem.o															\
-  $(megaa-OBJS)																\
-
-megar-OBJS := 																\
-  010.o																		\
+smartr-OBJS := 																\
+  smart-http.o																\
   micurest.o																\
   cojson_progmem.o															\
   micurest_progmem.o														\
+  Print.o																	\
+  WString.o																	\
+  Stream.o																	\
+  CDC.o																		\
+  HID.o																		\
+  USBCore.o																	\
 
-mega-DEFS :=																\
+smart-DEFS :=																\
   COJSON_TEST_OMIT_NAMES													\
-
-megaa-DEFS :=																\
-  COJSON_TEST_OMIT_NAMES													\
-
-megab-DEFS :=																\
   CSTRING_PROGMEM															\
 
-megap-DEFS :=																\
+
+smartr-DEFS :=																\
   CSTRING_PROGMEM															\
 
-megaq-DEFS :=																\
-  CSTRING_PROGMEM															\
-
-megar-DEFS :=																\
-  CSTRING_PROGMEM															\
-
-megab-INCLUDES :=															\
-  $(BASE-DIR)/suites/basic													\
-  
-megap-INCLUDES :=															\
+smart-INCLUDES :=															\
   $(BASE-DIR)/suites/basic													\
 
-megaq-INCLUDES :=															\
+smartr-INCLUDES :=															\
   $(BASE-DIR)/suites/basic													\
 
-megar-INCLUDES :=															\
-  $(BASE-DIR)/suites/basic													\
 
 100.o : FILE-FLAGS:=-Wno-overflow
 
@@ -205,12 +207,19 @@ METRIC-OBJS :=																\
   $(COJSON-OBJS)															\
   avrcppfix.o 																\
   chartypetable_progmem.o													\
+  cojson_progmem.o															\
+  hooks.o																	\
+  CDC.o																		\
+  USBCore.o																	\
+  HID.o																		\
+  Print.o																	\
+  wiring.o																	\
 
 METRIC-FLAGS :=																\
   -Wl,--gc-sections			 												\
 
-vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
-vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
+vpath %.cpp $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS))
+vpath %.c   $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS))
 
 .DEFAULT:
 
@@ -219,14 +228,14 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
 
 .SECONDARY:
 
-$(BASE-DIR)/mega.vars:
+$(BASE-DIR)/smart.vars:
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),								\
 		$(if $(ARDUINO-DIR),												\
 			echo ARDUINO-DIR:=$(ARDUINO-DIR) > $@;,							\
 			$(error ARDUINO-DIR is not set))								\
 		$(if $(VARIANT-DIR),												\
 			echo VARIANT-DIR:=$(VARIANT-DIR) >> $@;,						\
-			$(error VARIANT-DIR is not set))								\
+			$(error ARDUINO-DIR is not set))								\
 		echo "# lookup for $(PREFIX)g++$(SUFFIX)" >> $@;					\
 		$(if $(shell which $(PREFIX)g++$(SUFFIX)),							\
 			echo "# found in path\n# "$(shell which $(PREFIX)g++$(SUFFIX))>>$@;,\
@@ -252,17 +261,17 @@ $(TARGET-DIR)/%.elf: $(OBJS) $($(TARGET)-OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 	@chmod a-x $@
 
-$(TARGET-DIR)/%.hex: $(TARGET-DIR)/%.elf $(BASE-DIR)/mega.vars
+$(TARGET-DIR)/%.hex: $(TARGET-DIR)/%.elf $(BASE-DIR)/smart.vars
 	@echo "$(BOLD)objcopy$(NORM)" $(notdir $@)
 	$(OBJ)	$(OFLAGS) $< $@
 	$(SIZE) $(SFLAGS) $<
 
-$(BASE-DIR)/mega.metrics.txt: $(METRICS)
+$(BASE-DIR)/smart.metrics.txt: $(METRICS)
 	@head -1 $< > $@
 	@grep -h -v filename  $(sort $^) >> $@
 	@cat $@
 
-metrics: $(BASE-DIR)/mega.metrics.txt
+metrics: $(BASE-DIR)/smart.metrics.txt
 
 $(TARGET): $(TARGET-DIR)/$(TARGET).hex
 
@@ -274,5 +283,5 @@ run: $(TARGET)
 rebuild: clean $(TARGET)
 
 clean:
-	@rm -f *.o *.map *.size $(TARGET-DIR)/$(TARGET).hex $(TARGET-DIR)/$(TARGET).elf
+	@rm -f *.o *.map *. *.size $(TARGET-DIR)/$(TARGET).hex $(TARGET-DIR)/$(TARGET).elf
 

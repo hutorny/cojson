@@ -27,10 +27,10 @@ using namespace cojson;
 using namespace test;
 
 struct Config080 : Config {
-	inline result_t run(const Environment& env, const char* in) noexcept {
+	inline result_t run(const Environment& env, cstring in) noexcept {
 		bool pass = structure().read(*this, test::json(in));
 		if( !pass || env.isbenchmark() ) return
-				combine1(pass, test::json(nullptr).error());
+				combine1(pass, test::json(cstring(nullptr)).error());
 		pass = structure().write(*this, env.output);
 		return combine1(pass, test::json().error(), env.error());
 	}
@@ -65,12 +65,12 @@ static inline result_t _R(bool pass, error_t in, const Environment& env) noexcep
 
 struct Test080 : Test {
 	static Test080 tests[];
-	inline Test080(const char * name, const char * desc, runner func)
+	inline Test080(cstring name, cstring desc, runner func)
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 	static const char datain[];
 	static double data[3];
 
@@ -83,7 +83,7 @@ struct Test080 : Test {
 		data[2] = 0;
 	}
 
-	static inline result_t run2(const Environment& env, const char* in) noexcept {
+	static inline result_t run2(const Environment& env, cstring in) noexcept {
 		clear();
 		bool pass =
 			V<double, dbl3>().read(test::json(in));
@@ -100,20 +100,20 @@ double Test080::data[3] = {0,0,0};
 		[](const Environment& env) noexcept -> result_t body)
 
 Test080 Test080::tests[] = {
+	RUN("benchmarking: reading/writing array[3] of double", {
+		return Test080::run2(env,
+			CSTR("[0.0029296875, 0.0146484375, 0.04541015625]"));
+	}),
 	RUN("benchmarking: reading single nested property", {
 			config2.clear();
 			bool pass = Config::structure().read(config2,
-					test::json("{\"wan\"\t:\t{ \"expires\": 0 }}"));
+					test::json(CSTR("{\"wan\"\t:\t{ \"expires\": 0 }}")));
 			return _R(pass, test::json().error(), env);
 		}),
-	RUN("benchmarking: reading/writing array[3] of double", {
-		return Test080::run2(env,
-			"[0.0029296875, 0.0146484375, 0.04541015625]");
-	}),
 	RUN("benchmarking: reading/writing custom type", {
 		config2.clear();
 		bool pass = Config::Wan::structure().read(
-				config2.wan, test::json("{ \"ipaddr\": [192,168,159,47] }"));
+			config2.wan, test::json(CSTR("{ \"ipaddr\": [192,168,159,47] }")));
 		pass = pass && Config::Wan::structure().write(config2.wan, output(env));
 		return _R(pass, test::json().error(), env);
 	}),
@@ -122,7 +122,7 @@ Test080 Test080::tests[] = {
 		return _R(pass, error_t::noerror, env) ; }),
 	RUN("benchmarking: reading Config", {
 		config2.clear();
-		return config2.run(env, Test080::datain);
+		return config2.run(env, cstring(Test080::datain));
 	}),
 };
 
@@ -130,17 +130,23 @@ reader<ip4_t> reader<ip4_t>::unit __attribute__((weak));
 
 #undef  _T_
 #define _T_ (8000)
-static const master_t Master[std::extent<decltype(Test080::tests)>::value] = {
-	nullptr, _P_(1), _P_(2), _P_(3), _P_(4)
+static cstring const Master[std::extent<decltype(Test080::tests)>::value] = {
+	_P_(0), cstring(nullptr), _P_(2), _P_(3), _P_(4)
 };
 
-#include "080.inc"
-
-const master_t Test080::master() const noexcept {
+#ifdef __AVR__
+#	include "080.avr.inc"
+#else
+#	include "080.inc"
+#endif
+cstring Test080::master() const noexcept {
 	return Master[index()];
 }
-
+#ifndef CSTRING_PROGMEM
 const char Test080::datain[] = {
+#else
+const char Test080::datain[] __attribute__((progmem))= {
+#endif
 /* cat 080.json | file2c > 080.in.inc */
 #include "080.in.inc"
 ,0};

@@ -45,6 +45,12 @@
 namespace cojson {
 	namespace test {
 	using namespace details;
+
+	/* tstring differs from cstring by fixed base type char */
+	typedef std::conditional<config::cstring == config::cstring_is::avr_progmem,
+			progmem<char>, const char*>::type tstring;
+
+
 	/* combination of input errors (bits 0..7) and output errors (8..15) */
 	enum result_t : unsigned {
 		success 	=  0,
@@ -72,26 +78,67 @@ namespace cojson {
 	}
 
 	/**
-	 * On avr master data take too much RAM,
-	 * Placing data in progmem requires different access methods
-	 * This wrapper encapsulates master data
-	 */
-	struct master_t {
-		const void* data;
-		constexpr unsigned long farptr() const noexcept {
-			return reinterpret_cast<unsigned long>(data);
-		}
-		template<typename T>
-		T get(unsigned n);
-	};
-
-	/**
 	 * This class provides numeric identities for
 	 * progmem strings
 	 */
 	template<unsigned N>
 	struct pstring {
 		static const char_t str[];
+	};
+
+	template<typename A>
+	bool match(A a, const void * b, unsigned) noexcept;
+	template<>
+	bool match(progmem<char>, const void *, unsigned) noexcept;
+	template<>
+	bool match(const char_t*, const void *, unsigned) noexcept;
+
+	template<typename T>
+	inline unsigned strlen(T s) noexcept {
+		return ::strlen(s);
+	}
+	template<>
+	unsigned strlen<const wchar_t*>(const wchar_t*) noexcept;
+	template<>
+	unsigned strlen<const char16_t*>(const char16_t* s) noexcept;
+	template<>
+	unsigned strlen<const char32_t*>(const char32_t* s) noexcept;
+	template<>
+	unsigned strlen(progmem<char>) noexcept;
+
+
+	/**
+	 * Output stream for matching against a constant string
+	 */
+	class rstream : public ostream {
+	public:
+		inline rstream() noexcept : pos(0), max(0),  ptr(cstring(nullptr)) { }
+		inline cstring begin() const noexcept { return ptr; }
+		inline size_t count() const noexcept { return pos; }
+		inline void size(size_t limit) noexcept {
+			if(limit == (unsigned)-1)
+				setlen();
+			else
+				if(limit < max) max = limit;
+		}
+		bool put(char_t val) noexcept;
+		inline void restart() noexcept {
+			clear();
+			pos = 0;
+		}
+		void  set(cstring data) noexcept {
+			if( ptr != data )
+				restart();
+			ptr = data;
+			setlen();
+		}
+	private:
+		inline void setlen() noexcept {
+			max = ptr == nullptr ? 0 : test::strlen(ptr) + 1;
+		}
+		size_t 	pos;
+		size_t	max;
+		cstring ptr;
 	};
 
 
@@ -109,30 +156,44 @@ namespace cojson {
 			negative	// only negative output
 		};
 
-		Environment(buffer& out) noexcept
-		  : output(out), options {normal, false, false, nothing, -1, 0 } {}
-		virtual void dump(bool) const noexcept {}
-		virtual void begin() const noexcept {}
-		virtual void next() const noexcept {}
-		virtual void end() const noexcept {}
+		Environment() noexcept
+		  : output(), options {normal, false, false, nothing, -1, 0 } {}
+		virtual void next() const noexcept {
+			output.restart();
+			resetbuffsize();
+		}
+		virtual void begin() const noexcept  { }
+		virtual void end() const noexcept  {
+			if( options.output == as_json && dumped )
+				write(']');
+			dumped = false;
+		}
 		/** save master for a given file and test 	*/
-		virtual void master(const char*, int) const noexcept {}
+		virtual void master(tstring, int) const noexcept {}
 		/** match output with the given master  	*/
-		virtual int match(master_t) const noexcept = 0;
+		inline void matching(cstring data) const noexcept {
+			output.set(data);
+		}
+		inline bool matches() const noexcept {
+			return (output.error() & error_t::mismatch) == error_t::noerror;
+		}
 		/* prints a message to stderr 				*/
 		virtual void msg(verbosity lvl, const char *fmt, ...) const noexcept
 				__attribute__ ((format (printf, 3, 4))) = 0;
-		virtual void msg(verbosity lvl, master_t) const noexcept = 0;
+		virtual void msgt(verbosity lvl, tstring) const noexcept = 0;
+		virtual void msgc(verbosity lvl, cstring) const noexcept = 0;
 		/* prints test result per success and dumping settings 	*/
 		virtual void out(bool success, const char *fmt, ...) const noexcept
 				__attribute__ ((format (printf, 3, 4))) = 0;
-		virtual const char* shortname(const char* filename) const noexcept {
-			return filename;
-		}
+		virtual const char* shortname(tstring filename) const noexcept = 0;
 		virtual void startclock() const noexcept = 0;
 		virtual long elapsed() const noexcept = 0;
-		virtual void setbuffsize(unsigned) const noexcept = 0;
-		virtual void resetbuffsize() const noexcept = 0;
+		inline void setbuffsize(unsigned limit) const noexcept {
+			output.size(limit);
+		}
+		virtual void resetbuffsize() const noexcept {
+			output.size(-1);
+		}
 
 		inline error_t error() const noexcept {
 			return output.error();// & ~ error_t::eof;
@@ -163,14 +224,20 @@ namespace cojson {
 		inline bool stoponfail() const noexcept {
 			return options.stoponfail;
 		}
-		buffer& output;
+		mutable rstream output;
 		static Environment& instance() noexcept;
-		inline bool noout(bool success, bool json) const {
+		inline bool noout(bool success, bool json) const noexcept {
 			return
 				options.output == nothing ||
 				(options.output == as_json && ! (json && success) )||
 				(options.output == positive && ! success) ||
 				(options.output == negative && success);
+		}
+		virtual void dump(bool) const noexcept {}
+
+		inline void dump(char_t chr, bool success) const noexcept {
+			if( noout(success,true) ) return;
+			if( write(chr) ) dumped = true;
 		}
 	protected:
 		struct {
@@ -182,6 +249,8 @@ namespace cojson {
 			int loopcount;
 		} options;
 		virtual ~Environment() noexcept {}
+		virtual bool write(char_t b) const noexcept  = 0;
+		mutable bool dumped = false;
 	private:
 		Environment(const Environment&);
 		Environment& operator=(const Environment&);
@@ -190,18 +259,24 @@ namespace cojson {
 	class Test {
 	public:
 		typedef result_t (* runner)(const Environment&);
-		inline Test(const char * fname, const char * descript, runner func)
-			noexcept : filename(fname), description(descript), run(func) {
+		inline Test(tstring fname, tstring descript, runner func) noexcept
+		  : filename(fname), description(descript), frun(func) {
 			add(this);
 		}
-		const char* const filename;
-		const char* const description;
-		runner const run;
+		inline Test(tstring fname, tstring descript) noexcept
+		  : Test(fname, descript, fstub) { }
+		tstring const filename;
+		tstring const description;
+		runner const frun;
+		static result_t fstub(const Environment&) noexcept { return success; }
 		static int runall(const Environment&) noexcept;
 		static int benchmark(const Environment&) noexcept;
 		static unsigned count() noexcept;
+		virtual result_t run(const Environment& env) const noexcept {
+			return frun(env);
+		}
 		virtual int index() const noexcept { return 0; }
-		virtual const master_t master() const noexcept { return {nullptr}; }
+		virtual cstring master() const noexcept {return cstring(nullptr);}
 		virtual ~Test() noexcept {}
 		static inline error_t expected(error_t err, error_t exp) noexcept {
 			return static_cast<error_t>(
@@ -255,24 +330,6 @@ namespace cojson {
 
 	typedef Environment::verbosity LVL;
 
-	template<size_t N>
-	class test_buffer : public buffer {
-	public:
-		test_buffer() noexcept : buffer(data) {}
-		size_t maxsize() const noexcept {
-			return N;
-		}
-		void setlimit(unsigned limit) noexcept {
-			buffer::set(data, limit);
-		}
-		void resetlimit() noexcept {
-			buffer::set(data, N);
-		}
-
-	private:
-		char_t data[N];
-	};
-
 	template<typename T>
 	inline constexpr const char* error_fmt() noexcept;
 	template<>
@@ -292,11 +349,15 @@ namespace cojson {
 		return "Error %X at position %d : '%.8Us'\n";
 	}
 
-	template<>
-	class test_buffer<0> : public istream {
+	/**
+	 * Input stream for reading from constant string
+	 */
+	class cstream : public istream {
 	public:
-		test_buffer() noexcept
-			: pos(0), ptr(nullptr), err(error_t::noerror) { }
+		inline cstream() noexcept
+			: pos(0), ptr(cstring(nullptr)), err(error_t::noerror) { }
+		inline cstream(cstring str) noexcept
+			: pos(0), ptr(str), err(error_t::noerror) { }
 		inline size_t count() const noexcept { return pos; }
 		bool get(char_t& val) noexcept {
 			val = ptr[pos];
@@ -312,15 +373,16 @@ namespace cojson {
 			clear();
 			pos = 0;
 		}
-		void  set(const char_t * data) noexcept {
+		void  set(cstring data) noexcept {
 			ptr = data;
+			restart();
 		}
 		void error(error_t e) noexcept {
 			if( e != error_t::eof )
 				Environment::instance().msg(
 					((e & error_t::blocked) != error_t::noerror
 					  ? LVL::verbose : LVL::debug), error_fmt<char_t>(), e, pos,
-					ptr ? ptr + (pos > 0 ? pos -1 : pos) : ptr);
+					ptr == nullptr ? ptr + (pos > 0 ? pos -1 : pos) : ptr);
 			err |= e;
 			if( ! isvirtual )
 				istream::error(e);
@@ -333,9 +395,10 @@ namespace cojson {
 				istream::clear();
 			err = error_t::noerror;
 		}
+		static cstream instance;
 	private:
 		size_t 	pos;
-		const char_t *ptr;
+		cstring ptr;
 		error_t err;
 	};
 
@@ -361,8 +424,8 @@ namespace cojson {
 		size_t 	pos;
 	};
 
-	static inline lexer& json(const char_t* data = nullptr) {
-		static test_buffer<0> inp;
+	static inline lexer& json(cstring data = cstring(nullptr)) {
+		static cstream inp;
 		static lexer jsonp(inp);
 		if( data != nullptr ) {
 			inp.set(data);
@@ -375,13 +438,30 @@ namespace cojson {
 
 
 }}
+
 using namespace cojson;
 using namespace test;
 #ifdef CSTRING_PROGMEM
-#define NAME(s) static inline progmem<char> s() noexcept { \
-		static const char l[] __attribute__((progmem)) = #s; return progmem<char>(l);}
+#	include <avr/pgmspace.h>
+#	define CSTR(s) ([]() noexcept -> cstring {							\
+		static constexpr const char l[] __attribute__((progmem))= s;	\
+		return cstring(l); }())
+#	define TSTR(s) ([]() noexcept -> tstring {							\
+		static constexpr const char l[] __attribute__((progmem))= s;	\
+		return tstring(l); }())
+#	define NAME(s) static inline progmem<char> s() noexcept { 			\
+		static const char l[] __attribute__((progmem)) = #s; 			\
+		return progmem<char>(l);}
+#	define ALIAS(f,s) static inline progmem<char> f() noexcept {		\
+		static const char l[] __attribute__((progmem)) = #s; 			\
+		return progmem<char>(l); }
 #else
-#define NAME(s) static inline constexpr const char* s() noexcept {return #s;}
+#	define NAME(s) static inline constexpr const char_t* s() noexcept {	\
+		return #s;}
+#	define ALIAS(f,s) static inline constexpr const char_t* f() noexcept { \
+		return #s;}
+#	define CSTR(s) s
+#	define TSTR(s) s
 #endif
 
 #endif /* TOOLS_COMMON_HPP_ */

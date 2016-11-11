@@ -286,7 +286,7 @@ template<typename T, int N, int M>
 T static_string<T,N,M>::data[N];
 
 template<item I, class M>
-static result_t runx(const Environment& env, const char_t* inp, const M &m,
+static result_t runx(const Environment& env, cstring inp, const M &m,
 		error_t expect = error_t::noerror) noexcept {
 	bool r = I().read(json(inp));
 	bool e = m.run(env);
@@ -294,7 +294,7 @@ static result_t runx(const Environment& env, const char_t* inp, const M &m,
 }
 
 template<class M, const clas<M>& I()>
-static result_t runx(const Environment& env, const char_t* inp, const M &m, M&& t,
+static result_t runx(const Environment& env, cstring inp, const M &m, M&& t,
 		error_t expect = error_t::noerror)
 	noexcept {
 	bool r = I().read(t, json(inp));
@@ -314,7 +314,7 @@ struct sstr : static_string<char_t, 32, M> {
 	static bool match(const char_t * m) noexcept {
 		return details::match(m, self::data);
 	}
-	static result_t run(const Environment& env, const char_t* inp,
+	static result_t run(const Environment& env, cstring inp,
 			const char_t* answer, error_t expected = error_t::noerror) noexcept {
 		bool r,m;
 		self::fill();
@@ -327,7 +327,7 @@ struct sstr : static_string<char_t, 32, M> {
 		return combine2(r, m, json().error() xor expected);
 	}
 
-	static result_t run0(const Environment& env, const char_t* inp,
+	static result_t run0(const Environment& env, cstring inp,
 			const char_t* answer) noexcept {
 		bool r, m;
 		self::fill();
@@ -349,7 +349,7 @@ struct arr {
 	static bool match(const T (&answer)[N]) noexcept {
 		return memcmp(self::data,answer, sizeof(data)) == 0;
 	}
-	static result_t run(const Environment& env, const char_t* inp,
+	static result_t run(const Environment& env, cstring inp,
 			const T (&answer)[N], error_t expected =error_t::noerror) noexcept {
 		bool r = cojson::V<T, self::item>().read(json(inp));
 		error_t err = Test::expected(json().error(), expected);
@@ -359,7 +359,7 @@ struct arr {
 		return combine2(r, m, json().error() xor expected);
 	}
 
-	static result_t run2(const Environment& env, const char_t* inp,
+	static result_t run2(const Environment& env, cstring inp,
 			const T (&answer)[N], error_t expected =error_t::noerror) noexcept {
 		bool r = cojson::V<T, N, self::data>().read(json(inp));
 		error_t err = Test::expected(json().error(), expected);
@@ -408,23 +408,21 @@ struct register_specifier<char32_t> {
 }}
 
 #define _T_ (_T_ has to be defined in the <test>.cpp file)
-#define _M_(n) template<> const char_t pstring<(_T_+n)>::str[] __attribute__((progmem))
-#define _P_(n) {pstring<(_T_+n)>::str}
-
 #ifdef CSTRING_PROGMEM
-#	include <avr/pgmspace.h>
-#	define CSTR(s) ([]() noexcept -> cstring {						\
-	static constexpr const char l[] __attribute__((progmem))= s;	\
-	return cstring(l); }())
+#define _M_(n) template<> const char_t pstring<(_T_+n)>::str[] __attribute__((progmem))
 #else
-#	define CSTR(s) s
+#define _M_(n) template<> const char_t pstring<(_T_+n)>::str[]
 #endif
+#define _P_(n) cstring(pstring<(_T_+n)>::str)
 
 #ifdef COJSON_TEST_OMIT_NAMES
-#define OMIT(s) (nullptr)
+#	define OMIT(s) tstring(nullptr)
 #else
-#define OMIT(s) (s)
+#	ifdef CSTRING_PROGMEM
+#		define OMIT(s) TSTR(s)
+#	else
+#		define OMIT(s) (s)
+#	endif
 #endif
-
 
 #endif /* TOOLS_TEST_HPP_ */

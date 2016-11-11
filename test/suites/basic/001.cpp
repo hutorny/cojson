@@ -34,12 +34,12 @@ static const value& structure() {
 
 struct Test001 : Test {
 	static Test001 tests[];
-	inline Test001(const char * name, const char * desc, runner func)
+	inline Test001(cstring name, cstring desc, runner func)
 		noexcept : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 
@@ -77,13 +77,13 @@ Test001 Test001::tests[] = {
 #undef _T_
 #define _T_ (100)
 
-static const master_t Master[details::countof(Test001::tests)] = {
+static cstring const Master[details::countof(Test001::tests)] = {
 	 _P_(0), _P_(1), _P_(2), _P_(3), _P_(4), _P_(5), _P_(6), _P_(7), _P_(8)
 };
 
 #include "001.inc"
 
-const master_t Test001::master() const noexcept {
+cstring Test001::master() const noexcept {
 	return Master[index()];
 }
 

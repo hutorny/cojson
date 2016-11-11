@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
  *
- * arduino.cpp - cojson tests, Arduino specific implementation
+ * smart.cpp - cojson tests, Linkit Smart specific implementation
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
  *
@@ -241,7 +241,7 @@ struct DefaultEnvironment : Environment {
 	}
 
 	bool write(char b) const noexcept {
-		if( b ) Serial.write(b);
+		if( b ) Serial1.write(b);
 		return b;
 	}
 	mutable char buff[128];
@@ -251,7 +251,7 @@ struct DefaultEnvironment : Environment {
 		va_start(args, fmt);
 		vsprintf(buff, fmt, args);
 		va_end(args);
-		Serial.write(buff);
+		Serial1.write(buff);
 	}
 
 	void out(bool success, const char *fmt, ...) const noexcept {
@@ -260,7 +260,7 @@ struct DefaultEnvironment : Environment {
 		va_start(args, fmt);
 		vsprintf(buff, fmt, args);
 		va_end(args);
-		Serial.write(buff);
+		Serial1.write(buff);
 	}
 	friend void dbg(const char *fmt, ...);
 	const char* shortname(progmem<char> filename) const noexcept {
@@ -279,14 +279,14 @@ struct DefaultEnvironment : Environment {
 	void msgc(verbosity lvl, cstring str) const noexcept {
 		if( lvl > options.level ) return;
 		if( str != nullptr )
-			while(*str) Serial.write(*str++);
-		Serial.write('\n');
+			while(*str) Serial1.write(*str++);
+		Serial1.write('\n');
 	}
 	void msgt(verbosity lvl, tstring str) const noexcept {
 		if( lvl > options.level ) return;
 		if( str != nullptr )
-			while(*str) Serial.write(*str++);
-		Serial.write('\n');
+			while(*str) Serial1.write(*str++);
+		Serial1.write('\n');
 	}
 
 } environment;
@@ -311,7 +311,7 @@ using namespace cojson;
 using namespace cojson::test;
 
 static constexpr int ledPin = 13;
-static constexpr int greenLed = 53;
+static constexpr int greenLed = 3;
 
 tstring help_str = TSTR(
 	"cojson test runner\n"
@@ -350,20 +350,20 @@ static int command() {
 	bool has = false;
 	unsigned char toggle = 0;
 	int chr;
-	while( ! Serial.available() ) {
+	while( ! Serial1.available() ) {
 		delay(100);
-		Serial.write((++toggle) & 4 ?  "\r:" : "\r.");
+		Serial1.write((++toggle) & 4 ?  "\r:" : "\r.");
 		digitalWrite(ledPin, toggle & 0x10 ? HIGH : LOW);
 	}
 	while(true) {
-		while( ! Serial.available() ) {
+		while( ! Serial1.available() ) {
 			delay(100);
 			digitalWrite(ledPin, (++toggle) & 0x10 ? HIGH : LOW);
 		}
-		chr = Serial.read();
-		Serial.write(chr);
+		chr = Serial1.read();
+		Serial1.write(chr);
 		switch( chr ) {
-		default: Serial.write("\r?"); break;
+		default: Serial1.write("\r?"); break;
 		case 'w':
 			atmega::wdt::disable();
 			environment.msg(LVL::silent,"atchdog off\n");
@@ -391,7 +391,7 @@ static int command() {
 		case '*': environment.setsingle(-1); break;
 		case 'b':
 				environment.setbenchmark(has ? value : 1000);
-				Serial.write('\n');
+				Serial1.write('\n');
 				return 2;
 		case '0':
 		case '1':
@@ -422,11 +422,11 @@ void dbg(const char *fmt, ...) noexcept  {
 	va_start(args, fmt);
 	vsprintf(environment.buff, fmt, args);
 	va_end(args);
-	Serial.write(environment.buff);
+	Serial1.write(environment.buff);
 }
 
 void setup() {
-	Serial.begin(115200);
+	Serial1.begin(115200);
 	pinMode(ledPin, OUTPUT);
 	pinMode(greenLed, OUTPUT);
 	digitalWrite(greenLed, HIGH);
@@ -440,11 +440,14 @@ void loop() {
 	case 1: Test::runall(environment); break;
 	case 2: Test::benchmark(environment); break;
 	default:
-		Serial.write("\n?\n");
+		Serial1.write("\n?\n");
 		delay(1000);
 	}
 }
 
+USBDevice_ USBDevice;
+void USBDevice_::attach() {}
+USBDevice_::USBDevice_() {}
 /*
 Program:   42166 bytes (16.1% Full)
 Data:       7148 bytes (87.3% Full)

@@ -40,6 +40,10 @@ void runner::add(runner::func r) noexcept {
 	tests[count++] = r;
 }
 
+Environment& Environment::instance() noexcept {
+	return * (Environment*) nullptr;
+}
+
 }}
 using namespace cojson;
 using namespace test;

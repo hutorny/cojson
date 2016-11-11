@@ -585,6 +585,9 @@ struct iostate : iostate_t<> {
 	inline bool isgood() const noexcept {
 		return (error() & error_t::failed) == error_t::noerror;
 	}
+	inline bool eof() const noexcept {
+		return (error() & error_t::eof) != error_t::noerror;
+	}
 	template<typename T>
 	static inline constexpr bool isok(T chr) noexcept {
 		using sT = typename std::make_signed<T>::type;
@@ -1308,7 +1311,7 @@ struct clas : noncopyable {
 	static inline constexpr bool null(C&) noexcept {
 		return config::null_is_error;
 	}
-private:
+protected:
 	friend class collection<indexer>;
 	inline bool read(C& obj, lexer& in, const char_t * name) const noexcept {
 		for(size_t i = 0; i < size; ++i) {

@@ -155,14 +155,14 @@ static const value& byref() {
 
 struct Test071 : Test {
 	static Test071 tests[];
-	inline Test071(const char * name, const char * desc, runner func)
+	inline Test071(tstring name, tstring desc, runner func)
 	  : Test(name, desc,func) {
 		static register_specifier<char_t> r;
 	}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 
@@ -206,14 +206,14 @@ Test071 Test071::tests[] = {
 };
 #undef  _T_
 #define _T_ (7100)
-static const master_t Master[std::extent<decltype(Test071::tests)>::value] = {
+static cstring const Master[std::extent<decltype(Test071::tests)>::value] = {
 	_P_(0), _P_(1), _P_(2), _P_(3), _P_(4), _P_(5), _P_(6),
 	_P_(7), _P_(8), _P_(9), _P_(10), _P_(11), _P_(12)
 };
 
 #include "071.inc"
 
-const master_t Test071::master() const noexcept {
+cstring Test071::master() const noexcept {
 	return Master[index()];
 }
 }}

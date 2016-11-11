@@ -33,6 +33,7 @@ SRC-DIRS :=																	\
   suites/basic																\
   suites/bench																\
   suites/host																\
+  suites/http																\
   suites/metrics															\
   suites/wchar																\
   tools																		\
@@ -43,12 +44,15 @@ INCLUDES := 																\
   tools																		\
   suites/include															\
 
-HOST-TARGETS := host uchar wchar char16 char32 overflow saturate sprintf
-MEGA-TARGETS := mega megaa megab megap megaq
-OPENWRT-TARGETS := openwrt-mips openwrt-mips-uchar
+HOST-GOALS := host uchar wchar char16 char32 overflow saturate sprintf
+MEGA-GOALS := mega megaa megab megap megaq megar
+SMART-GOALS := smart smarta smartb smartr
+OPENWRT-GOALS := openwrt-mips openwrt-mips-uchar
+TEENSY-GOALS := teensy3 teensy3a teensy3r
+OTHER-GOALS := pic32mx msp430fr esp8266 esp8266a
 
-TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(OPENWRT-TARGETS)	\
-               teensy3 teensy3a pic32mx msp430fr 
+TOP-GOALS := all hosts $(HOST-GOALS) $(MEGA-GOALS) $(OPENWRT-GOALS)			\
+               $(SMART-GOALS) $(TEENSY-GOALS) $(OTHER-GOALS) 
 
 .PHONY: help
 
@@ -60,14 +64,17 @@ TOP-TARGETS := all hosts $(HOST-TARGETS) $(MEGA-TARGETS) $(OPENWRT-TARGETS)	\
 help:
 	@echo
 	@echo "This makefile builds cojson unit tests for various target machines"
-	@echo "Supported machines are: Host, Arduino Mega, Teensy3.1, OpenWRT"
-	@echo "Corresponding makefile goals are:$(BOLD)host mega teensy3 openwrt-mips msp430fr$(NORM)"
+	@echo "Supported machines are: Host, Arduino Mega, Teensy3.1, OpenWRT, ESP8266"
+	@echo "Corresponding makefile goals are:"
+	@echo "    $(BOLD)host mega smart teensy3 openwrt-mips msp430fr esp8266$(NORM)"
 	@echo "Other top goals covering various aspects:"
 	@echo "    $(BOLD)megaa$(NORM)  - unit tests not included in mega"
 	@echo "    $(BOLD)megab$(NORM)  - benchmarking tests for Arduino Mega"
 	@echo "    $(BOLD)megap$(NORM)  - mega unit tests with literals in progmem"
 	@echo "    $(BOLD)megaq$(NORM)  - megaa unit tests with literals in progmem"
+	@echo "    $(BOLD)megar$(NORM)  - mega micurest tests"
 	@echo "    $(BOLD)teensy3a$(NORM)-unit tests not included in teensy3"
+	@echo "    $(BOLD)teensy3r$(NORM)-teensy3 micurest tests"
 	@echo "    $(BOLD)uchar$(NORM)  - host tests for unsigned char"
 	@echo "    $(BOLD)wchar$(NORM)  - host tests for wchar_t"
 	@echo "    $(BOLD)char16$(NORM) - host tests for char16_t"
@@ -80,13 +87,13 @@ help:
 	@echo "    $(BOLD)<goal> clean$(NORM)  - cleans working directory"
 	@echo "    $(BOLD)<goal> rebuild$(NORM)- makes a clean rebuild"
 	@echo "    $(BOLD)<goal> metrics$(NORM)- builds code size metrics for the goal,"
-	@echo "                    one of: mega, teensy3, pic32mx, msp430fr, openwrt-mips"
+	@echo "                    one of: mega, smart, teensy3, pic32mx, msp430fr, openwrt-mips"
 
-all: $(filter-out all hosts,$(TOP-TARGETS))
+all: $(filter-out all hosts,$(TOP-GOALS))
 	@$(if $(filter-out clean,$(MAKECMDGOALS)),,								\
 		echo "$(BOLD)all done$(NORM)")
 
-hosts: $(HOST-TARGETS)
+hosts: $(HOST-GOALS)
 	
 
 rebuild:: $(filter-out rebuild clean distclean,$(MAKECMDGOALS))
@@ -119,11 +126,18 @@ char32:   MK := host
 overflow: MK := host
 saturate: MK := host
 sprintf:  MK := host
+esp8266a: MK := esp8266
+#esp8266b: MK := esp8266
+smarta:   MK := smart
+smartb:   MK := smart
+smartr:   MK := smart
 megab:    MK := mega
 megaa:    MK := mega
 megap:    MK := mega
 megaq:    MK := mega
+megar:    MK := mega
 teensy3a: MK := teensy3
+teensy3r: MK := teensy3
 msp430%:  MK := msp430
 openwrt-mips-uchar: MK := openwrt-mips
 
@@ -140,7 +154,7 @@ run::
 %:: $(TARGET-DIR) $(BUILD-DIR)
 	@mkdir -p $(BUILD-DIR)/$@
 	@$(if $(filter clean,$(MAKECMDGOALS)),,echo "$(BOLD)make$(NORM) $@")
-	@$(MAKE) $(or $(filter-out $(TOP-TARGETS), $(MAKECMDGOALS)), $@)		\
+	@$(MAKE) $(or $(filter-out $(TOP-GOALS), $(MAKECMDGOALS)), $@)		\
 		--no-print-directory 												\
 		-C $(BUILD-DIR)/$@													\
 		-f $(BASE-DIR)/$(if $(MK),$(MK),$@).mk								\

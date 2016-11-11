@@ -185,7 +185,7 @@ bool Xdo36::run(const Environment& env, const Xdo36* that) const noexcept {
 
 struct Test036 : Test {
 	static Test036 tests[];
-	inline Test036(const char * name, const char * desc, runner func) noexcept
+	inline Test036(cstring name, cstring desc, runner func) noexcept
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
@@ -201,30 +201,30 @@ struct Test036 : Test {
 Test036 Test036::tests[] = {
 	RUN("reading POD object", {
 		return  runx<podo COMMA Pod36>(env,
-			"{\"c\": 1, \"i\":2, \"l\":3, \"u\":4, \"s\":\"1234567\"}",
+		CSTR("{\"c\": 1, \"i\":2, \"l\":3, \"u\":4, \"s\":\"1234567\"}"),
 			Pod36 {1,2,3,4, "1234567"});								}),
 	RUN("POD static", {
 		return  runx<edos COMMA Edo36>(env,
-			"{\"c\":10,\"i\":20,\"l\":30,\"u\":40,\"s\":\"10203040506070\"}",
+		CSTR("{\"c\":10,\"i\":20,\"l\":30,\"u\":40,\"s\":\"10203040506070\"}"),
 			Edo36 {10,20,30,40, "10203040506070\0"});						}),
 	RUN("POD dynamic", {
 		return runx<Edo36 COMMA edod>(env,
-		"{\"c\":100,\"i\":200,\"l\":300,\"u\":400,\"s\":\"100200300400500\"}",
+		CSTR("{\"c\":100,\"i\":200,\"l\":300,\"u\":400,\"s\":\"100200300400500\"}"),
 			Edo36 { 100,200,300L,400LL, "100200300400500" },
 			Edo36 { 0,0,0,0, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"});			}),
 	RUN("POD dynamic with string field", {
 		return runx<Edo36 COMMA edox>(env,
-		"{\"i\":210,\"l\":310,\"s\":\"000210310000500\"}",
+		CSTR("{\"i\":210,\"l\":310,\"s\":\"000210310000500\"}"),
 			Edo36 { 0,210,310L,0 , "000210310000500" },
 			Edo36 { 0,0,0,0, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"});			}),
 	RUN("Nested PDO", {
 		return runx<Xdo36 COMMA xdo>(env,
-		"{\"c\":{\"i\":230,\"l\":330,\"s\":\"nested\"}, \"s\":\"parent\"}",
+		CSTR("{\"c\":{\"i\":230,\"l\":330,\"s\":\"nested\"}, \"s\":\"parent\"}"),
 			Xdo36 { "parent", {0,230,330L,0 , "nested"} },
 			Xdo36 { "\0", {0,0,0,0, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"}});	}),
 	RUN("POD with excessive members", {
 		return runx<Edo36 COMMA edox>(env,
-		"{\"c\":120,\"i\":220,\"l\":320,\"u\":420,\"s\":\"000220320000520\"}",
+		CSTR("{\"c\":120,\"i\":220,\"l\":320,\"u\":420,\"s\":\"000220320000520\"}"),
 			Edo36 { 0,220,320L, 0, "000220320000520" },
 			Edo36 { 0,0,0,0, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"});			}),
 };

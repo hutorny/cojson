@@ -118,11 +118,21 @@ struct any_printf<char, T, false, false, true> {
 		return sprintf(dst, "%.*g", config::write_double_precision, val);
 	}
 };
-
+static constexpr bool with_sprintf =
+		config::write_double_impl == config::write_double_impl_is::with_sprintf;
 template<typename C,
-	bool=any_printf<C, double>::present,
-	bool=any_printf<char, double>::present>
+	bool=with_sprintf && any_printf<C, double>::present,
+	bool=with_sprintf && any_printf<char, double>::present>
 struct any {
+	static inline bool gfmt(C* dst, size_t size, double val) noexcept;
+//	static inline bool gfmt(C* dst, size_t size, double val) noexcept {
+//		int r = any_printf<C,double>::gfmt(dst, size, val);
+//		return r >= 0 && r < (int)size;
+//	}
+};
+
+template<typename C, bool B>
+struct any<C,true,B> {
 	static inline bool gfmt(C* dst, size_t size, double val) noexcept {
 		int r = any_printf<C,double>::gfmt(dst, size, val);
 		return r >= 0 && r < (int)size;
@@ -139,6 +149,11 @@ struct any<C,false,true> {
 		while( r-- ) dst[r] = tmp[r];
 		return true;
 	}
+};
+
+template<typename C>
+struct any<C,false,false> {
+	static bool gfmt(C* dst, size_t size, double val) noexcept;
 };
 
 
@@ -180,24 +195,18 @@ template<>
 float exp_10<float>(short n) noexcept {
 	return exp10_helper<float>::calc(n);
 }
+template<config::write_double_impl_is = config::write_double_impl>
+static bool write_double_impl(const double& val, ostream& out) noexcept;
 
 template<>
-bool gfmt<char_t*, double>(char_t* buf, size_t size, double val) noexcept {
-	return any<char_t>::gfmt(buf, size, val);
-}
-using impl_is = config::write_double_impl_is;
-template<impl_is = config::write_double_impl>
-bool write_double_impl(const double& val, ostream& out) noexcept;
-
-template<>
-inline bool write_double_impl<impl_is::internal>(
+inline bool write_double_impl<config::write_double_impl_is::internal>(
 		const double& val, ostream& out) noexcept {
 	return floating::serialize<ostream,config::write_double_integral_type>(
 			val, out, config::write_double_precision);
 }
 
 template<>
-inline bool write_double_impl<impl_is::with_sprintf>(
+inline bool write_double_impl<config::write_double_impl_is::with_sprintf>(
 		const double& val, ostream& out) noexcept {
 	temporary tmp;
 	if( ! any<char_t>::gfmt(tmp.buffer, tmp.size, val) ) {

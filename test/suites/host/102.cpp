@@ -29,7 +29,7 @@ inline constexpr int odif(T a, T b) noexcept {
 
 struct Test102 : Test {
 	static Test102 tests[];
-	inline Test102(const char * name, const char * desc, runner func)
+	inline Test102(cstring name, cstring desc, runner func)
 		noexcept : Test(name, desc, func) {}
 	int index() const noexcept {
 		return (this-tests);

@@ -160,8 +160,17 @@ public:
 	inline T operator*() const noexcept { return read(ptr); }
 	inline T operator[](unsigned i) const noexcept { return read(ptr+i); }
 	inline progmem operator++(int) noexcept { return progmem(ptr++); }
-	inline constexpr progmem operator+(unsigned off) noexcept {
+	inline constexpr progmem operator+(unsigned off) const noexcept {
 		return progmem(ptr+off);
+	}
+	inline constexpr bool operator !=(std::nullptr_t) const noexcept {
+		return ptr != nullptr;
+	}
+	inline constexpr bool operator !=(progmem that) const noexcept {
+		return ptr != that.ptr;
+	}
+	inline constexpr bool operator ==(std::nullptr_t) const noexcept {
+		return ptr == nullptr;
 	}
 	inline progmem& operator++() noexcept { ++ptr; return *this; }
 private:
@@ -192,6 +201,11 @@ inline bool match<char const*, char*>(char const* a, char* b) noexcept {
 
 template<>
 bool match<progmem<char>, char const*>(progmem<char> a, char const* b) noexcept;
+
+template<>
+inline bool match<progmem<char>,char*>(progmem<char> a, char* b) noexcept {
+	return match<progmem<char>, char const*>(a,b);
+}
 
 } // namespace details
 } //namespace cojson

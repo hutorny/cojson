@@ -36,21 +36,78 @@
 #endif
 namespace cojson {
 namespace test {
+template<>
+unsigned strlen(const wchar_t* s) noexcept {
+	return wcslen(s);
+}
 
-bool HostEnvironment::dumped = false;
+template<>
+unsigned strlen<const char16_t*>(const char16_t* s) noexcept {
+	const char16_t* i = s;
+	if(!i) return 0;
+	while(*i) ++i;
+	return i-s;
+}
+template<>
+unsigned strlen<const char32_t*>(const char32_t* s) noexcept {
+	const char32_t* i = s;
+	if(!i) return 0;
+	while(*i) ++i;
+	return i-s;
+}
 
-void HostEnvironment::master(const char* file, int index) const noexcept {
+template<>
+bool match<const wchar_t*>(const wchar_t* a, void const* b, unsigned n) noexcept {
+	return memcmp(a,b,n) == 0;
+}
+template<>
+bool match<const char16_t*>(const char16_t* a, void const* b, unsigned n) noexcept {
+	return memcmp(a,b,n) == 0;
+}
+template<>
+bool match<const char32_t*>(const char32_t* a, void const* b, unsigned n) noexcept {
+	return memcmp(a,b,n) == 0;
+}
+
+char_t buffer[COJSON_TEST_BUFFER_SIZE];
+char_t* curr = buffer;
+
+bool HostEnvironment::write(char_t b) const noexcept {
+	if( curr - buffer < COJSON_TEST_BUFFER_SIZE )
+		*curr++ = b;
+	return false;
+}
+
+void HostEnvironment::dump(bool success) const noexcept {
+	write(0);
+	if( noout(success, true) ) return;
+	const char *b = (const char*) buffer;
+	if( *b ) {
+		if( options.output == as_json ) dlm();
+		fputs(b, stdout);
+		dumped = true;
+	}
+}
+
+void HostEnvironment::end() const noexcept  {
+	if( options.output == as_json && dumped )
+		fputc(']',stdout);
+	dumped = false;
+}
+
+
+void HostEnvironment::master(tstring file, int index) const noexcept {
 	if( ! options.make_masters ) return;
-	const char_t* i;
+	const char_t* i = buffer;
 	static const char* last_fail = nullptr;
 	char filename[64];
 	if(file == nullptr)
 		return msg( verbosity::verbose, "WARN:\tNo file given, master was not created\n");
 	mastername(file, filename);
-	msg(verbosity::debug,
-			"opening output '%s' for test '%s'\n",filename, file);
-	size_t n = output.count();
-	if((i=output.begin()) && (*i || n) ) {
+	//size_t n = output.count();
+	if( *i ) {
+		msg(verbosity::debug,
+				"opening output '%s' for test '%s'\n",filename, file);
 		FILE* out = fopen(filename, index ? "a+" : "w");
 		if( out == nullptr ) {
 			if( last_fail != file ) {
@@ -62,8 +119,8 @@ void HostEnvironment::master(const char* file, int index) const noexcept {
 			return;
 		}
 		fprintf(out,"_M_(%2d)=",index);
-		fputs(literals<>::cstring, out);
-		while(n--) {
+		fputs("\"", out);
+		while(*i) {
 			if( ! put(*i++, out) ) {
 				if( last_fail != file && ferror(out) )
 					msg(verbosity::silent,
@@ -76,42 +133,20 @@ void HostEnvironment::master(const char* file, int index) const noexcept {
 		fclose(out);
 	}
 }
+void HostEnvironment::next() const noexcept {
+	Environment::next();
+	curr = buffer;
+	*curr = 0;
+}
+
 }}
 
-static test_buffer<COJSON_TEST_BUFFER_SIZE> outb;
-static DefaultEnvironment environment(outb);
+static HostEnvironment environment;
 
 Environment& Environment::instance() noexcept {
 	return environment;
 }
 
-void DefaultEnvironment::next() const noexcept {
-	base::next();
-	setbuffsize(outb.maxsize());
-	outb.clear();
-}
-
-/* workaraoud for not bloating buffer interface with test-related methods */
-void DefaultEnvironment::setbuffsize(unsigned limit) const noexcept {
-	if( limit > outb.maxsize() ) limit = outb.size();
-	outb.setlimit(limit);
-}
-
-void DefaultEnvironment::resetbuffsize() const noexcept {
-	outb.resetlimit();
-}
-
-static int data = 0;
-
-int& uitem() noexcept {
-	return data;
-}
-
-static double rdata = 0;
-
-double& real() noexcept {
-	return rdata;
-}
 using namespace coop;
 
 BINAME(verbose,v)

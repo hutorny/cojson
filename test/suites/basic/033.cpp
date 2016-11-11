@@ -31,7 +31,7 @@ inline constexpr int odif(T a, T b) noexcept {
 
 struct Test033 : Test {
 	static Test033 tests[];
-	inline Test033(const char * name, const char * desc, runner func) noexcept
+	inline Test033(cstring name, cstring desc, runner func) noexcept
 	  : Test(name, desc, func) {}
 	int index() const noexcept {
 		return (this-tests);
@@ -120,47 +120,51 @@ struct master2 {
 Test033 Test033::tests[] = {
 	RUN("parsing array: array1 of various", {
 		return runx<array1 COMMA master1>(env,
-			"[23000, 4.5e3, 500000000000, \"test string\"]",
+		  CSTR("[23000, 4.5e3, 500000000000, \"test string\"]"),
 		master1 {23000, 4.5e3, 500000000000LL, "test string"}); }),
 	RUN("parsing array: array1 w/o spaces", {
 		return runx<array1 COMMA master1>(env,
-			"[3,0.,5,\"3,0.,5\"]",
+		CSTR(  "[3,0.,5,\"3,0.,5\"]"),
 		master1 {3, 0, 5LL, "3,0.,5"}); }),
 	RUN("parsing array: array1 w extra spaces", {
 		return runx<array1 COMMA master1>(env,
-			"[\t-1 \n,\t 0.1\n,    777\n,\n\"0, 0.1, 777\"]",
+		CSTR("[\t-1 \n,\t 0.1\n,    777\n,\n\"0, 0.1, 777\"]"),
 		master1 {0, 0.1, 777LL, "0, 0.1, 777"}, error_t::mismatch); }),
 	RUN("parsing array: array1 w extra elements", {
-		return runx<array1 COMMA master1>(env, "[1, 2, 3,\"4\", 5]",
+		return runx<array1 COMMA master1>(env,
+		CSTR("[1, 2, 3,\"4\", 5]"),
 		master1 {1, 2, 3LL, "4"}, error_t::overrun); }),
 	RUN("parsing array: array1 w null", {
-		return runx<array1 COMMA master1>(env, "[1, 2, 3, null]",
+		return runx<array1 COMMA master1>(env,
+		CSTR("[1, 2, 3, null]"),
 		master1 {1, 2, 3, ""}); }),
 	RUN("parsing array: array1 w mismatching elements", {
-		return runx<array1 COMMA master1>(env, "[1, 2, \"3\",\"4\"]",
+		return runx<array1 COMMA master1>(env,
+		  CSTR("[1, 2, \"3\",\"4\"]"),
 		master1 {1, 2, 0, "4"}, error_t::mismatch); }),
 	RUN("parsing array: array1 w extra spaces", {
 		return runx<array1 COMMA master1>(env,
-			"[\t-1 \n,\t 0.1\n,    777\n,\n\"0, 0.1, 777\"]",
+		CSTR("[\t-1 \n,\t 0.1\n,    777\n,\n\"0, 0.1, 777\"]"),
 		master1 {0, 0.1, 777LL, "0, 0.1, 777"}, error_t::mismatch); }),
 	RUN("parsing array: array2 of various ", {
 		return runx<array2 COMMA master2>(env,
-			"[[1,2,3,4], \"[1,2,3,4], 3\", 3]",
+		CSTR("[[1,2,3,4], \"[1,2,3,4], 3\", 3]"),
 		master2 {{1,2,3,4}, "[1,2,3,4], 3", 3 }); }),
 	RUN("parsing array: array2 missing depth ", {
 		return runx<array2 COMMA master2>(env,
-			"[1,2,3,4, \"[1,2,3,4], 3\", 3]",
+		CSTR("[1,2,3,4, \"[1,2,3,4], 3\", 3]"),
 		master2 {{0,0,0,0}, "", 3 }, error_t::mismatch | error_t::overrun); }),
 	RUN("parsing array: array2 extra nested elements ", {
 		return runx<array2 COMMA master2>(env,
-			"[[1,2,3,4,5,6], \"[1,2,3,4], 7\", 7]",
+		CSTR("[[1,2,3,4,5,6], \"[1,2,3,4], 7\", 7]"),
 		master2 {{1,2,3,4}, "[1,2,3,4], 7", 7 }, error_t::overrun); }),
 	RUN("parsing array: array2 empty nested array", {
 		return runx<array2 COMMA master2>(env,
-			"[[], \"[0,0,0,0], 1\", 1]",
+		CSTR("[[], \"[0,0,0,0], 1\", 1]"),
 		master2 {{0,0,0,0}, "[0,0,0,0], 1", 1 }); }),
 	RUN("parsing array: array1 w excessive elements", {
-		return runx<array1 COMMA master1>(env, "[10, 20, 30, \"ok\"] [1,2,3]",
+		return runx<array1 COMMA master1>(env,
+		CSTR("[10, 20, 30, \"ok\"] [1,2,3]"),
 		master1 {10, 20, 30, "ok"}); }),
 };
 

@@ -19,16 +19,48 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "Arduino.h"
-#undef F
-#undef bit
-#undef abs
+#include <stdarg.h>
+#include <string.h>
+#include "esp8266_user.h"
 #include "common.hpp"
+#include "dbg.h"
 
 #ifndef COJSON_TEST_BUFFER_SIZE
 #	define COJSON_TEST_BUFFER_SIZE (4096)
 #endif
 
+static struct Console {
+	inline void write(const char* s) noexcept { serial_write(s); }
+	inline void write(char c) noexcept { serial_writec(c); }
+	inline bool available() noexcept { return serial_available(); }
+	char read() noexcept { return serial_read(); }
+	inline Console() {
+	}
+	static inline void attach() {
+		user_rx_installcb(rx_callback);
+		user_hb_installcb(hb_callback);
+	}
+private:
+	bool command(unsigned len);
+	static void rx_callback(unsigned len);
+	static void hb_callback(int cnt) {
+		if( ! busy ) {
+			serial_write(cnt & 1 ? "\r:" : "\r.");
+		}
+	}
+	static bool busy;
+} Serial;
+
+void Console::rx_callback(unsigned len) {
+	busy = true;
+	busy = Serial.command(len);
+}
+
+void console_attach() {
+	Console::attach();
+}
+
+bool Console::busy = false;
 
 namespace cojson {
 	namespace details {
@@ -46,7 +78,7 @@ namespace cojson {
 namespace test {
 
 struct DefaultEnvironment : Environment {
-	mutable long usec_start = 0;
+	mutable unsigned usec_start = 0;
 	inline DefaultEnvironment() noexcept {
 		setverbose(normal);
 		setoutlvl(nothing);
@@ -67,14 +99,13 @@ struct DefaultEnvironment : Environment {
 		if( b ) Serial.write(b);
 		return b;
 	}
-	mutable char buff[128];
+
 	void msg(verbosity lvl, const char *fmt, ...) const noexcept  {
 		if( lvl > options.level ) return;
 		va_list args;
 		va_start(args, fmt);
-		vsprintf(buff, fmt, args);
+		ets_vprintf(ets_putc, fmt, args);
 		va_end(args);
-		Serial.write(buff);
 	}
 
 	void msgc(verbosity lvl, cstring master) const noexcept {
@@ -93,9 +124,8 @@ struct DefaultEnvironment : Environment {
 		if( noout(success, false) ) return;
 		va_list args;
 		va_start(args, fmt);
-		vsprintf(buff, fmt, args);
+		ets_vprintf(ets_putc, fmt, args);
 		va_end(args);
-		Serial.write(buff);
 	}
 	const char* shortname(const char* filename) const noexcept {
 		const char* r;
@@ -112,8 +142,6 @@ Environment& Environment::instance() noexcept {
 
 
 }}
-
-static constexpr int ledPin = 13;
 
 static void print_help() {
 	static constexpr const char help[] =
@@ -139,39 +167,28 @@ static void print_help() {
 	"  verbosity normal, output all, run all tests\n";
 	Serial.write(help);
 }
-/*
-   text	   data	    bss	    dec	    hex	filename
- 100952	   2628	  12264	 115844	  1c484	cojson.elf
- */
-static int command() {
-	int value = 0;
-	bool has = false;
-	unsigned char toggle = 0;
+
+
+bool Console::command(unsigned len) {
+	static int value = 0;
+	static bool has = false;
 	int chr;
-	while( ! Serial.available() ) {
-		delay(100);
-		Serial.write((++toggle) & 4 ?  "\r:" : "\r.");
-		digitalWrite(ledPin, toggle & 0x10 ? HIGH : LOW);
-	}
-	while(true) {
-		while( ! Serial.available() ) {
-			delay(100);
-			digitalWrite(ledPin, (++toggle) & 0x10 ? HIGH : LOW);
-		}
-		chr = Serial.read();
-		Serial.write(chr);
+	while(len--) {
+		chr = read();
 		switch( chr ) {
-		default: Serial.write("\r?"); break;
+		default: write("\r?"); break;
 		case '?': print_help(); break;
 		case '\r':
-		case '\n': if( has ) environment.setsingle(value); return 1;
+		case '\n': if( has ) environment.setsingle(value);
+			Test::runall(environment);
+			value = 0; has = false; return false;
 		case '\t':
 		case ' ': if( has ) environment.setsingle(value);
 			value = 0; has = false; break;
-		case 'd': environment.setverbose(LVL::debug); break;
-		case 'v': environment.setverbose(LVL::verbose); break;
-		case 's': environment.setverbose(LVL::silent); break;
-		case 'n': environment.setverbose(LVL::normal); break;
+		case 'd': environment.setverbose(LVL::debug); write("ebug\n");  break;
+		case 'v': environment.setverbose(LVL::verbose); write("erbose\n"); break;
+		case 's': environment.setverbose(LVL::silent); write("ilent\n"); break;
+		case 'n': environment.setverbose(LVL::normal); write("ormal\n"); break;
 		case '-': environment.setoutlvl(Environment::dumping::nothing); break;
 		case 'a': environment.setoutlvl(Environment::dumping::all); break;
 		case 'j': environment.setoutlvl(Environment::dumping::as_json); break;
@@ -180,8 +197,12 @@ static int command() {
 		case '*': environment.setsingle(-1); break;
 		case 'b':
 				environment.setbenchmark(has ? value : 1000);
-				Serial.write('\n');
-				return 2;
+				write('\n');
+				system_soft_wdt_stop();
+				Test::benchmark(environment);
+				system_soft_wdt_restart();
+				value = 0; has = false;
+				return false;
 		case '0':
 		case '1':
 		case '2':
@@ -194,38 +215,12 @@ static int command() {
 		case '9': has = true; value = value * 10 + chr - '0'; break;
 		}
 	}
-}
-
-
-void setup() {
-	Serial.begin(9600);
-	pinMode(ledPin, OUTPUT);
-}
-
-void loop() {
-	switch( command() ) {
-	case 1: Test::runall(environment); break;
-	case 2: Test::benchmark(environment); break;
-	default:
-		Serial.write("\n?\n");
-		delay(1000);
-	}
-
+	return true;
 }
 
 void dbg(const char *fmt, ...) noexcept  {
 	va_list args;
 	va_start(args, fmt);
-	vsprintf(environment.buff, fmt, args);
+	ets_vprintf(ets_putc, fmt, args);
 	va_end(args);
-	Serial.write(environment.buff);
 }
-
-/*
-  text	   data	    bss	    dec	    hex	filename
-  95244	   2628	  12296	 110168	  1ae58	cojson.elf
- 113696	   2628	  14448	 130772	  1fed4	cojson.elf + 080.cpp
- 204808	   2628	  14444	 221880	  362b8	cojson.elf (speed optimized)
-
- */
-

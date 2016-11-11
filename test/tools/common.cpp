@@ -19,6 +19,7 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
+#include <string.h>
 #include "common.hpp"
 
 #ifndef COJSON_SUITE_SIZE
@@ -32,6 +33,31 @@ namespace cojson {
 
 	static const Test * tests[COJSON_SUITE_SIZE];
 	static int tcount = 0;
+	cstream cstream::instance;
+
+	template<>
+	bool match<char const*>(const char* a, void const* b, unsigned n) noexcept {
+		return memcmp(a,b,n) == 0;
+	}
+
+	bool rstream::put(char_t val) noexcept {
+		if( ptr == nullptr ) {
+			Environment::instance().dump(val, error()== error_t::noerror);
+			return true;
+		}
+		if( pos >= max ) {
+			error(error_t::eof);
+			return false;
+		}
+		Environment::instance().dump(val, error()== error_t::noerror);
+		if( ptr[pos] == val ) {
+			//TODO print output if( Environment::instance().n)
+			++pos;
+		} else {
+			error(error_t::mismatch);
+		}
+		return true;
+	}
 
 	unsigned Test::count() noexcept {
 		return tcount;
@@ -44,7 +70,7 @@ namespace cojson {
 	int Test::benchmark(const Environment& env) noexcept {
 		int t = env.getsingle();
 		if( t < 0 ) {
-			env.msg(LVL::silent, "Benchmark mode is missing test num to run\n");
+			env.msgt(LVL::silent, TSTR("Benchmark mode is missing test num to run\n"));
 			return -1;
 		}
 		const Test* test = tests[t];
@@ -64,7 +90,7 @@ namespace cojson {
 	int Test::runall(const Environment& env) noexcept {
 		int i = env.getsingle();
 		if( tcount <= 0 ) {
-			env.msg(LVL::silent, "No tests available\n");
+			env.msgt(LVL::silent, TSTR("No tests available\n"));
 			return bad;
 		}
 		if( i >= 0 ) {
@@ -87,20 +113,22 @@ namespace cojson {
 			env.next();
 			result_t r = success;
 			const Test* t = *test;
-			if( t && (nullptr != t->run) ) {
-				env.msg(LVL::verbose, "INFO #%3d: running '%s:%d' \"%s\"\n",
-					i, env.shortname(t->filename) /*()*/, t->index(), t->description);
+			if( t && (nullptr != t->frun) ) {
+				env.msg(LVL::verbose, "INFO #%3d: running '%s:%d' ",
+					i, env.shortname(t->filename), t->index());
+				env.msgt(LVL::verbose, t->description);
+				env.matching(t->master());
 				if( (r = t->run(env) ) ) {
 					env.msg(LVL::silent,
 						"BAD  #%3d: test '%s:%d' returned %X\n", i,
 						env.shortname(t->filename), t->index(), r);
 					++bad;
 				} else {
-					if( ! env.match(t->master()) ) {
+					if( ! env.matches() ) {
 						env.msg(LVL::normal,
 							"BAD  #%3d: test '%s:%d' does not match master\n",
 							i, env.shortname(t->filename),t->index());
-						env.msg(LVL::verbose, t->master());
+						env.msgc(LVL::debug, t->master());
 						++bad;
 						if( env.stoponfail() ) break;
 					}
@@ -112,7 +140,6 @@ namespace cojson {
 				if( env.stoponfail() ) break;
 			}
 			env.resetbuffsize();
-			env.output.put('\000');
 			env.dump(r == success && env.output.error() == error_t::noerror);
 			env.master(t->filename, t->index());
 			++i;

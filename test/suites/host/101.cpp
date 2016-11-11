@@ -65,12 +65,12 @@ static const value& byget() {
 
 struct Test101 : Test {
 	static Test101 tests[];
-	inline Test101(const char * name, const char * desc, runner func)
+	inline Test101(cstring name, cstring desc, runner func)
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
 	}
-	const master_t master() const noexcept;
+	cstring master() const noexcept;
 };
 
 static inline void setminmax() noexcept {
@@ -88,6 +88,7 @@ static inline result_t _R(bool pass, const Environment& env) noexcept {
 		[](const Environment& env) noexcept -> result_t body)
 Test101 Test101::tests[] = {
 	RUN("double/float by ref", {
+//dbg("In Test101\n");
 		return _R(byref().write(env.output), env);	}),
 	RUN("double/float by ptr", {
 		return _R(byptr().write(env.output), env);	}),
@@ -107,7 +108,7 @@ Test101 Test101::tests[] = {
 };
 #undef  _T_
 #define _T_ (10100)
-static const master_t Master[details::countof(Test101::tests)] = {
+static cstring const Master[details::countof(Test101::tests)] = {
 	_P_(0), _P_(1), _P_(2), _P_(3), _P_(4)
 };
 #if defined __AVR__
@@ -117,7 +118,7 @@ static const master_t Master[details::countof(Test101::tests)] = {
 #else
 #	include "101.inc"
 #endif
-const master_t Test101::master() const noexcept {
+cstring Test101::master() const noexcept {
 	return Master[index()];
 }
 

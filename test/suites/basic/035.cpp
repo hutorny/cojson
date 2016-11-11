@@ -111,7 +111,7 @@ struct complex_master {
 
 struct Test035 : Test {
 	static Test035 tests[];
-	inline Test035(const char * name, const char * desc, runner func) noexcept
+	inline Test035(cstring name, cstring desc, runner func) noexcept
 	  : Test(name, desc,func) {}
 	int index() const noexcept {
 		return (this-tests);
@@ -125,31 +125,31 @@ struct Test035 : Test {
 Test035 Test035::tests[] = {
 	RUN("reading simple object", {
 		return  runx<simple COMMA simple_master>(env,
-				"{\"strname\":\"1234567\"}",
+				CSTR("{\"strname\":\"1234567\"}"),
 				simple_master { "1234567" });
 	}),
 	RUN("reading complex object", {
 		return  runx<complex COMMA complex_master>(env,
-			"{\"strname\": { \"a\" : \"complex \\\"string\" },"
+		CSTR("{\"strname\": { \"a\" : \"complex \\\"string\" },"
 			"\"b\": \"plain \\n string \","
 			"\"a\": [1,2,3,4,5],"
-			"\"c\": 7 }",
+			"\"c\": 7 }"),
 			complex_master { {1,2,3,4,5}, "plain \n string ",
 					7, "complex \"string"  });
 	}),
 	RUN("reading simple object, extra member", {
 		return  runx<simple COMMA simple_master>(env,
-				"{\"a\":100, \"strname\":\"lkjhg\"}",
+				CSTR("{\"a\":100, \"strname\":\"lkjhg\"}"),
 				simple_master { "lkjhg" });
 	}),
 	RUN("reading simple object, extra nested object", {
 		return  runx<simple COMMA simple_master>(env,
-				"{\"a\":{\"strname\": \"qwerty\"}, \"strname\":\"lkjhg\"}",
+		CSTR("{\"a\":{\"strname\": \"qwerty\"}, \"strname\":\"lkjhg\"}"),
 				simple_master { "lkjhg" });
 	}),
 	RUN("reading simple object, extra nested object", {
 		return  runx<simple COMMA simple_master>(env,
-				"{\"strname\":\"lkjhg\", \"a\":{\"strname\": \"qwerty\"}}",
+		CSTR("{\"strname\":\"lkjhg\", \"a\":{\"strname\": \"qwerty\"}}"),
 				simple_master { "lkjhg" });
 	}),
 };

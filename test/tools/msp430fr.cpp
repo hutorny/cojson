@@ -21,7 +21,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdarg>
-#include "mcu-env.hpp"
+#include "common.hpp"
 #include "msp430.hpp"
 
 #ifndef COJSON_TEST_BUFFER_SIZE
@@ -145,35 +145,14 @@ void ostream::putarg(const char *& fmt, va_list& arg) noexcept {
 }
 
 
-static test_buffer<COJSON_TEST_BUFFER_SIZE> outb;
-
-struct DefaultEnvironment : McuEnvironment {
+struct DefaultEnvironment : Environment {
 	mutable long usec_start = 0;
-	DefaultEnvironment(buffer& out) noexcept : McuEnvironment(out) {
+	inline DefaultEnvironment() noexcept {
 		setverbose(normal);
 		setoutlvl(nothing);
 	}
 
-	void setbuffsize(unsigned limit) const noexcept{
-		if( limit > outb.maxsize() ) limit = outb.size();
-		outb.setlimit(limit);
-
-	}
-	void next() const noexcept {
-		McuEnvironment::next();
-		setbuffsize(outb.maxsize());
-		outb.clear();
-	}
-	/** match output with the given master  */
-	int match(master_t master) const noexcept {
-		return master.data ? ! memcmp(
-			output.begin(), master.data, output.count()*sizeof(char_t))
-			: !0;
-	}
-
-	void master(const char* file, int index) const noexcept {
-
-	}
+	void master(const char* file, int index) const noexcept {}
 
 	void startclock() const noexcept {
 //		usec_start = micros();
@@ -183,17 +162,9 @@ struct DefaultEnvironment : McuEnvironment {
 		return 0;
 	}
 
-	void write(char b) const noexcept {
-		cout.put(b);
-	}
-	void write(const char *str) const noexcept  {
-		cout.put(str);
-	}
-	void write(const char *str, unsigned size) const noexcept  {
-		while(size--) cout.put(*str++);
-	}
-	void resetbuffsize() const noexcept {
-		outb.resetlimit();
+	bool write(char b) const noexcept {
+		if( b ) cout.put(b);
+		return b;
 	}
 	mutable char buff[128];
 	void msg(verbosity lvl, const char *fmt, ...) const noexcept  {
@@ -204,12 +175,17 @@ struct DefaultEnvironment : McuEnvironment {
 		va_end(args);
 	}
 
-	virtual void msg(verbosity lvl, master_t master) const noexcept {
+	void msgc(verbosity lvl, cstring master) const noexcept {
 		if( lvl > options.level ) return;
-		write((const char_t*)master.data);
-		write('\n');
+		cout.put((const char_t*)master);
+		cout.put('\n');
 	}
 
+	void msgt(verbosity lvl, tstring master) const noexcept {
+		if( lvl > options.level ) return;
+		cout.put((const char_t*)master);
+		cout.put('\n');
+	}
 
 	void out(bool success, const char *fmt, ...) const noexcept {
 		if( noout(success, false) ) return;
@@ -224,7 +200,7 @@ struct DefaultEnvironment : McuEnvironment {
 };
 
 
-static DefaultEnvironment environment(outb);
+static DefaultEnvironment environment;
 
 Environment& Environment::instance() noexcept {
 	return environment;

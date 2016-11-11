@@ -27,6 +27,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <chrono>
+#include <ostream>
 #include "common.hpp"
 #include "coop.hpp"
 
@@ -118,15 +119,8 @@ namespace cojson {
 			return 0;
 		}
 
-		static bool dumped;
 	public:
-		HostEnvironment(buffer& out) : Environment(out) {}
-		/** match output with the given master  */
-		int match(master_t data) const noexcept {
-			return data.data ? ! memcmp(
-				output.begin(), data.data, output.count()*sizeof(char_t))
-				: !0;
-		}
+		inline HostEnvironment() : Environment() {}
 		inline void dlm(bool end = false) const noexcept {
 			const char_t* b = end
 				? literals<>::end_array
@@ -134,31 +128,21 @@ namespace cojson {
 				: literals<>::begin_array;
 			fwrite(b,1,sizeof(char_t),stdout);
 		}
+		bool write(char_t b) const noexcept;
+		void next() const noexcept;
+		void end() const noexcept;
+		void dump(bool success) const noexcept;
 
-		void dump(bool success) const noexcept {
-			if( noout(success, true) ) return;
-			const char_t *b;
-			if( (b=output.begin()) != nullptr && *b ) {
-				if( options.output == as_json ) dlm();
-				size_t count = output.count() - (output.size() == 0 ? 0 : 1);
-				fwrite(b, count, sizeof(char_t), stdout);
-				fwrite(literals<>::lf, 1, sizeof(char_t), stdout);
-				fflush(stdout);
-				dumped = true;
-			}
-		}
-		virtual void end() const noexcept {
-			if( options.output == as_json && dumped )
-				dlm(true);
-			dumped = false;
-		}
-
-		virtual void msg(verbosity lvl, master_t master) const noexcept {
+		void msgt(verbosity lvl, const char* data) const noexcept {
 			if( lvl > options.level ) return;
-			fputs((const char*)master.data, stderr);
+			fputs(data, stderr);
 			fputs("\n",stderr);
 		}
 
+		void msgc(verbosity lvl, cstring data) const noexcept {
+			if( lvl > options.level ) return;
+			fprintf(stderr,fmt<decltype(data)>()+1,data);
+		}
 
 		void msg(verbosity lvl, const char *fmt, ...) const noexcept {
 			if( lvl > options.level ) return;
@@ -176,12 +160,12 @@ namespace cojson {
 			va_end(args);
 		}
 
-		const char* shortname(const char* filename) const noexcept {
+		const char* shortname(tstring filename) const noexcept {
 			const char* r;
 			return ((r=strrchr(filename,'/'))) ? ++r : filename;
 		}
 
-		void mastername(const char* filename, char * dst) const noexcept {
+		void mastername(tstring filename, char * dst) const noexcept {
 			//TODO use destination folder
 			//TODO skip relative part
 			if( (*filename=='.') && (*++filename=='.') && (*++filename=='/') )
@@ -194,21 +178,7 @@ namespace cojson {
 				strcat(dst,".inc");
 		}
 
-		void master(const char* file, int index) const noexcept;
-
-		void next() const noexcept {
-			Environment::next();
-			output.restart();
-		}
-	};
-
-	class DefaultEnvironment : public HostEnvironment {
-	public:
-		typedef HostEnvironment base;
-		DefaultEnvironment(buffer& out) : HostEnvironment(out) {}
-		void next() const noexcept;
-		void setbuffsize(unsigned) const noexcept;
-		void resetbuffsize() const noexcept;
+		void master(tstring filename, int) const noexcept;
 	};
 
 	template<>
@@ -220,6 +190,10 @@ namespace cojson {
 	bool HostEnvironment::put<wchar_t>(wchar_t chr, FILE* out) const noexcept;
 	template<>
 	bool HostEnvironment::put<char16_t>(char16_t chr, FILE* out) const noexcept;
+
+	template<class C>
+	std::ostream& operator+=(std::ostream& strm,const C& val);
+
 }}
 
 
