@@ -22,7 +22,7 @@
 #include <cstring>
 
 namespace coop {
-
+	using size_t = std::size_t;
 	/** biname - a function returning full or short option name 	*/
 	typedef const char* (*biname)(bool full);
 

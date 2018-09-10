@@ -1,29 +1,30 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015-2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
- * cojson_detectors.hpp - 
+ * cojson_helpers.hpp - helper classes for testing presence of various
+ * functions
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
-
-#ifndef COJSON_HELPERS_HPP_
-#define COJSON_HELPERS_HPP_
+#pragma once
 #include <type_traits>
 #include <limits>
 #include <stdint.h>
+#include <elemental.hpp>
 
 namespace cojson {
 namespace detectors {
@@ -89,6 +90,24 @@ static auto test_strcmp(long) -> std::false_type;
 
 template<typename T>
 struct has_strcmp : decltype(test_strcmp<T>(0)){};
+
+
+template<class C, typename T>
+static auto test_read(int) -> sfinae_true<
+	decltype(std::declval<C&>().read(std::declval<T>()))>;
+template<class C, typename T>
+static auto test_read(long) -> std::false_type;
+template<class C, typename T>
+struct has_read : decltype(test_read<C,T>(0)){};
+
+template<class C, typename T>
+static auto test_write(int) -> sfinae_true<
+	decltype(std::declval<C>().write(std::declval<T>()))>;
+template<class C, typename T>
+static auto test_write(long) -> std::false_type;
+template<class C, typename T>
+struct has_write : decltype(test_write<C,T>(0)){};
+
 }
 namespace details {
 /******************************************************************************/
@@ -111,6 +130,8 @@ struct numeric_helper_signed {
 	static constexpr T min = std::numeric_limits<T>::min();
 	static constexpr inline bool is_negative(T v) noexcept { return v < 0; }
 	static constexpr inline U abs(T v) noexcept { return v >= 0 ? v : -v; }
+	/** unsigned type without reference */
+	typedef typename std::remove_reference<U>::type V;
 };
 template<typename T>
 struct numeric_helper : std::conditional<std::is_signed<T>::value,
@@ -121,7 +142,12 @@ struct numeric_helper : std::conditional<std::is_signed<T>::value,
 		return v > static_cast<unsigned long long>(max) / 10ULL ?
 			static_cast<T>(v) : figure(v*10ULL);
 	}
+	static inline constexpr T log10(unsigned long long v) noexcept  {
+		return v < 10ULL ? 1 : log10(v / 10ULL) + 1;
+	}
+	/** unsigned type without reference */
 	static constexpr T pot = figure(10ULL); /** highest power of ten */
+	static constexpr T digits = log10(max);
 };
 
 
@@ -152,65 +178,5 @@ private:
 template<typename T>
 T exp_10(short) noexcept;
 
-template<typename T>
-class progmem {
-public:
-	explicit inline constexpr progmem(const T* str) noexcept : ptr(str) {}
-	explicit inline constexpr operator const T*() noexcept { return ptr; }
-	inline T operator*() const noexcept { return read(ptr); }
-	inline T operator[](unsigned i) const noexcept { return read(ptr+i); }
-	inline progmem operator++(int) noexcept { return progmem(ptr++); }
-	inline constexpr progmem operator+(unsigned off) const noexcept {
-		return progmem(ptr+off);
-	}
-	inline constexpr bool operator !=(std::nullptr_t) const noexcept {
-		return ptr != nullptr;
-	}
-	inline constexpr bool operator !=(progmem that) const noexcept {
-		return ptr != that.ptr;
-	}
-	inline constexpr bool operator ==(std::nullptr_t) const noexcept {
-		return ptr == nullptr;
-	}
-	inline progmem& operator++() noexcept { ++ptr; return *this; }
-private:
-	static T read(const T *ptr) noexcept;
-	const T *ptr;
-};
-
-template<typename A, typename B>
-bool match(A a, B b) noexcept;
-
-template<>
-bool match<const char *, const char*>(const char *, const char*) noexcept;
-
-template<>
-bool match<const wchar_t*, const wchar_t*>(
-		   const wchar_t*, const wchar_t*) noexcept;
-template<>
-bool match<const char16_t*, const char16_t*>(
-		   const char16_t*, const char16_t*) noexcept;
-template<>
-bool match<const char32_t*, const char32_t*>(
-		   const char32_t*, const char32_t*) noexcept;
-
-template<>
-inline bool match<char const*, char*>(char const* a, char* b) noexcept {
-	return match<char const*, const char*>(a,b);
-}
-
-template<>
-bool match<progmem<char>, char const*>(progmem<char> a, char const* b) noexcept;
-
-template<>
-inline bool match<progmem<char>,char*>(progmem<char> a, char* b) noexcept {
-	return match<progmem<char>, char const*>(a,b);
-}
-
 } // namespace details
 } //namespace cojson
-#endif //COJSON_HELPERS_HPP_
-
-
-
-

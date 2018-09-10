@@ -1,0 +1,15 @@
+#!/bin/bash
+if ! which node >/dev/null; then
+    echo node not found. >&2
+    echo To install it, please follow instructions given in >&2  
+    echo https://nodejs.org/uk/download/package-manager/ >&2  
+    exit 100
+fi
+if [ ! -f js/node_modules/command-line-args/index.js ] || [ ! -f js/node_modules/command-line-usage/index.js ] ; then
+    echo Installing dependencies. >&2    
+    cd js
+    npm install
+    cd ..
+fi
+#
+node $(dirname $0)/js/codegen.js "${@:1}" 

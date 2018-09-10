@@ -1,30 +1,28 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015-2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * cojson_float.hpp - floating conversion to string
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License v2
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
-#ifndef COJSON_FLOAT_HPP_
-#define COJSON_FLOAT_HPP_
+#pragma once
 #include <limits.h>
 #include <math.h>
-#ifndef COJSON_HELPERS_HPP_
-#	include "cojson_helpers.hpp"
-#endif
+#include <cojson_helpers.hpp>
 
 /*
  * Motivation
@@ -250,21 +248,21 @@ bool serialize(double val, S& out, sshort precision = 6) noexcept {
 			out.put('.');
 		switch(notation) {
 		case floating::notation::zero_4:
-			out.put('0'); /* no break */
+			out.put('0'); /* FALLTHRU */
 		case floating::notation::zero_3:
-			out.put('0'); /* no break */
+			out.put('0'); /* FALLTHRU */
 		case floating::notation::zero_2:
-			out.put('0'); /* no break */
+			out.put('0'); /* FALLTHRU */
 		case floating::notation::zero_1:
 		default:
 			if( fraction == 0 && notation == floating::notation::fixed )
 				return true;
 			fraction.skip(notation > floating::notation::zero_1);
-			was = false;
 			while( precision > 0 && fraction && fraction.get(digit,true) ) {
-				if( digit || precision > 1 )
+				if( digit || precision > 1 ) {
 					out.put('0' + digit);
-				if( (was = was || digit) ) --precision;
+					--precision;
+				}
 			}
 		}
 	} else
@@ -293,4 +291,3 @@ bool serialize(double val, S& out, sshort precision = 6) noexcept {
 
 }
 }
-#endif // COJSON_FLOAT_HPP_

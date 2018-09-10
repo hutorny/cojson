@@ -1,26 +1,26 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015-2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * cojson.cpp - main implementation file
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License v2
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
 #include "cojson.hpp"
-#include <stdint.h>
 
 namespace cojson {
 namespace details {
@@ -28,16 +28,14 @@ namespace details {
 /**
  * write value v as a 4HEXDIG char code
  */
-static inline bool ashex(char16_t v, ostream& out) noexcept {
+static inline bool ashex(uint_fast16_t v, ostream& out) noexcept {
 	/* rfc7159##section-7 allows only 4HEXDIG char codes */
-	unsigned char n = sizeof(v)*8 - 4;
-	while(n != 0 ) {
-		char16_t c = (v >> n) & (char16_t)0xF;
-		if( ! out.put(literal::digit0+c) ) return false;
-		n -= 4;
+	for(int_fast8_t n = 12; n >= 0; n-=4 ) {
+		uint_fast16_t c = (v >> n) & 0xF;
+		if( ! out.put(ashex(c)) ) return false;
 	}
 	return true;
-} /* avr: 106 bytes */
+}
 
 
 bool writer<const char_t*>::write(char_t chr, ostream& out) noexcept {
@@ -68,7 +66,7 @@ bool writer<const char_t*>::write(const char_t * str, ostream& out) noexcept {
 	if( ! out.put(literal::quotation_mark) ) return false;
 	while( *str && (r=write(*str++,out)) );
 	return r && out.put(literal::quotation_mark);
-} /* avr: 904 bytes */
+}
 
 bool reader<char_t*>::read(char_t* dst, size_t n, lexer& in) noexcept  {
 	bool first = true;
@@ -77,17 +75,21 @@ bool reader<char_t*>::read(char_t* dst, size_t n, lexer& in) noexcept  {
 		return in.skip_string(first);
 	}
 	ctype ct;
-	while( n != 0 && (ct=in.string(*dst, first)) == ctype::string ) {
+	while( n != 0 && hasbits((ct=in.string(*dst, first)), ctype::string | ctype::hex) ) {
 		++dst; --n; first = false;
+		if( n && hasbits(ct, ctype::hex) ) {
+			*dst = in.hexremainder();
+			++dst; --n;
+		}
 	}
 	if( n == 0 ) {
 		*--dst = 0;
 		in.error(error_t::overrun);
 		return in.skip_string(first);
 	}
-	if( ct == ctype::eof ) {
+	if( ct == ctype::eof || ct == ctype::null ) {
 		*dst = 0;
-		return true;
+		return ct == ctype::eof || ! config::null_is_error;
 	}
 	if( *dst ) {
 		in.error(error_t::bad);
@@ -95,7 +97,7 @@ bool reader<char_t*>::read(char_t* dst, size_t n, lexer& in) noexcept  {
 		return false;
 	}
 	return true;
-} /* avr: 456 bytes */
+}
 
 template<typename T>
 class maker {
@@ -197,7 +199,7 @@ bool reader<double>::read(double& val, lexer& in) noexcept {
 		}
 		return in.skip(ctype::number);
 	}
-} /* avr: 1010 bytes (+ 700 for float procedures */
+}
 
 }
 /******************************************************************************/
@@ -235,10 +237,11 @@ private:
 	static constexpr uint_fast8_t max = (sizeof(uint_fast8_t)*8)-1;
 	uint_fast8_t stack;
 	uint_fast8_t count;
-}; /* avr: 20 bytes */
+};
+
 
 bool lexer::skip(bool list) noexcept {
-if( config::config::mismatch != config::config::mismatch_is::error ) {
+if( not mismatch_is_error ) {
 	bstack stack;
 	char_t chr;
 	ctype ct;
@@ -311,12 +314,12 @@ if( config::config::mismatch != config::config::mismatch_is::error ) {
 	error(error_t::bad);
 }
 	return false;
-} /* avr: 102 bytes */
+}
 
 bool lexer::skip_string(bool first) noexcept {
-	if( config::config::mismatch == config::config::mismatch_is::error )
+	if( mismatch_is_error ) {
 		return false;
-	else {
+	} else {
 		char_t chr;
 		while( string(chr, first) == ctype::string ) { first = false; }
 		return chr == 0;
@@ -329,10 +332,9 @@ bool lexer::skip_member(bool first) noexcept {
 		skip_string(first) && skipws(chr) && chr == literal::name_separator;
 }
 
-static inline bool readable(const istream & in) noexcept {
+inline bool lexer::readable(const istream & in) noexcept {
 	return error_t::noerror == (in.error() &
-	  ((config::mismatch == config::mismatch_is::error) ?
-		error_t::blocked : error_t::failed));
+			(mismatch_is_error ? error_t::blocked : error_t::failed));
 }
 
 ctype lexer::get(char_t& chr) noexcept {
@@ -351,7 +353,7 @@ ctype lexer::get(char_t& chr) noexcept {
 
 inline ctype lexer::unhex(char_t& chr) noexcept {
 	int n = 5;
-	char_t v = 0;
+	uint_fast16_t v = 0;
 	ctype ct;
 	while( --n && isvalid(ct=get(chr)) ) {
 		switch( ct & ctype::unhex ) { /* ct is valid here, so unsafe and used */
@@ -373,14 +375,22 @@ inline ctype lexer::unhex(char_t& chr) noexcept {
 			return bad();
 		}
 	}
+	if( n ) return bad();
+	if( sizeof(char_t) == 1 )
+		if( v >= 0x100 ) {
+			chr = v >> 8;
+			back(v);
+			return ctype::string | ctype::hex;
+		}
 	chr = v;
-	return n == 0 ? ctype::string : bad();
+	return ctype::string;
 }
 
 inline ctype lexer::unescape(char_t& chr) noexcept {
 	ctype ct;
 	if( ! isvalid(ct=get(chr, ctype::special)) ) return ct;
 	switch(chr) {
+	case literal::slash:
 	case literal::escaped[0]:
 	case literal::escaped[1]:
 		return ctype::string;
@@ -402,12 +412,15 @@ inline ctype lexer::unescape(char_t& chr) noexcept {
 }
 /*
  * return cases:
- * err, eof, string, end
+ * err, eof, string, null, end
  */
 ctype lexer::string(char_t& chr, bool first) noexcept {
 	if( first ) {
 		if ( ! skipws(chr) ) return eos2eof(chr);
-		if( chr != literal::quotation_mark ) return bad(chr);
+		if( is_null(chr) )
+			return literal(literal::null_l()+1) ? ctype::null : bad(chr);
+		if( chr != literal::quotation_mark )
+			return bad(chr);
 	}
 	if( !isvalid(get(chr)) ) return bad(chr);
 	switch( chr ) {
@@ -419,7 +432,7 @@ ctype lexer::string(char_t& chr, bool first) noexcept {
 	default:
 		return ctype::string;
 	}
-} /* avr: 270 bytes (with unescape & unhex) */
+}
 
 bool lexer::member(char_t*& dst) noexcept {
 	char_t chr;
@@ -436,7 +449,7 @@ bool lexer::member(char_t*& dst) noexcept {
 	/* name was not read because of a bad character or eof */
 	bad();
 	return false;
-} /*avr: 598 bytes */
+}
 
 char_t lexer::skip_bom() noexcept {
 	char_t chr = 0;
@@ -450,13 +463,7 @@ char_t lexer::skip_bom() noexcept {
 	}
 	back(chr);
 	return *bom == 0 ? literal::bom()[0] : 0;
-} /* avr: 132 bytes */
-
-//static inline constexpr bool match_value(int ct, int expected, char_t chr) noexcept {
-//	/* ctype of quote appears to be not distinguishable from t,f,n	*/
-//	return expected == ctype::string ? chr == literal::quotation_mark :
-//			(ct & (int)ctype::value) && (ct & expected);
-//}
+}
 
 ctype lexer::value(ctype expected) noexcept {
 	ctype ct;
@@ -511,7 +518,7 @@ bool value::null(ostream& out) noexcept {
 	return out.puts(literal::null_l());
 }
 
-bool ostream::puts(const char_t* s) noexcept {
+bool ostream::_puts(const char_t* s) noexcept {
 	while( *s && put(*s++));
 	return *s == 0;
 }

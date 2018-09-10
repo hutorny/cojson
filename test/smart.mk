@@ -39,6 +39,10 @@ FIND = find /opt/arduino* \( -readable -or \! -prune \) \
 CXX-FIX := $(realpath $(BASE-DIR)/../include)
 MAKEFLAGS += --no-builtin-rules
 
+AVR-SRC-DIRS :=															\
+  $(BASE-DIR)/../src/platforms/avr										\
+
+
 -include $(BASE-DIR)/smart.vars
 export PATH
 
@@ -127,35 +131,18 @@ ARDUINO-OBJS := 															\
   WInterrupts.o																\
   abi.o																		\
 
-#  CDC.o																		\
-
-#  HID.o																		\
-#  USBCore.o																	\
-
-#  wiring_analog.o															\
-#  wiring_pulse.o															\
-#  wiring_shift.o															\
-#  HardwareSerial1.o															\
-#  HardwareSerial2.o															\
-#  HardwareSerial3.o															\
-
-#  IPAddress.o
-#  new.o
-#  Tone.o
-#  WMath.o
-#  WString.o
-
 COJSON-OBJS :=																\
   common.o 																	\
   cojson.o																	\
   cojson_libdep.o															\
+  cojson_progmem.o															\
+  elemental_progmem.o														\
+  chartypetable_progmem.o													\
 
 OBJS :=																		\
   $(COJSON-OBJS)															\
   $(ARDUINO-OBJS)															\
   avrcppfix.o 																\
-  chartypetable_progmem.o													\
-  cojson_progmem.o															\
 
 smart-OBJS := 																\
   smart.o 																	\
@@ -170,22 +157,17 @@ smartb-OBJS := 																\
   smart.o 																	\
   080.o																		\
 
-smartr-OBJS := 																\
-  smart-http.o																\
-  micurest.o																\
-  cojson_progmem.o															\
-  micurest_progmem.o														\
-  Print.o																	\
-  WString.o																	\
-  Stream.o																	\
-  CDC.o																		\
-  HID.o																		\
-  USBCore.o																	\
-
 smart-DEFS :=																\
   COJSON_TEST_OMIT_NAMES													\
   CSTRING_PROGMEM															\
 
+smarta-DEFS :=																\
+  COJSON_TEST_OMIT_NAMES													\
+  CSTRING_PROGMEM															\
+
+smartb-DEFS :=																\
+  COJSON_TEST_OMIT_NAMES													\
+  CSTRING_PROGMEM															\
 
 smartr-DEFS :=																\
   CSTRING_PROGMEM															\
@@ -218,8 +200,8 @@ METRIC-OBJS :=																\
 METRIC-FLAGS :=																\
   -Wl,--gc-sections			 												\
 
-vpath %.cpp $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS))
-vpath %.c   $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS))
+vpath %.cpp $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS) $(AVR-SRC-DIRS))
+vpath %.c   $(subst $(eval) ,:,$(VARIANT-DIR) $(ARDUINO-DIR) $(SRC-DIRS) $(AVR-SRC-DIRS))
 
 .DEFAULT:
 

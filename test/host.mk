@@ -29,6 +29,8 @@ LD  := @$(PREFIX)g++$(SUFFIX)
 BOLD:=$(shell tput bold)
 NORM:=$(shell tput sgr0)
 
+HOST-SRC-DIRS :=															\
+  $(BASE-DIR)/../src/platforms/special										\
 
 MAKEFLAGS += --no-builtin-rules
 
@@ -47,12 +49,12 @@ TESTS-BASIC := $(wildcard $(addprefix $(BASE-DIR)/suites/basic/, *.c *.cpp))
 TESTS-BENCH := $(wildcard $(addprefix $(BASE-DIR)/suites/bench/, *.c *.cpp))
 TESTS-HOST  := $(wildcard $(addprefix $(BASE-DIR)/suites/host/,  *.c *.cpp))
 TESTS-REST  := $(wildcard $(addprefix $(BASE-DIR)/suites/http/,  *.c *.cpp))
-TESTS-ALL   := $(notdir 													\
+TESTS-ALL   := $(sort $(notdir 													\
   $(TESTS-BASIC)															\
   $(TESTS-BENCH)    														\
   $(TESTS-HOST)     														\
   $(TESTS-REST)     														\
-)
+))
 
 host-OBJS   := $(patsubst %.c,%.o,$(TESTS-ALL:.cpp=.o))
 
@@ -105,6 +107,8 @@ CFLAGS += 																	\
   -fdata-sections 															\
   -std=gnu99 																\
 
+char16-FLAGS += -Wno-format
+char32-FLAGS += -Wno-format
 
 LDFLAGS +=																	\
   -s						 												\
@@ -115,8 +119,8 @@ LDFLAGS +=																	\
 .SUFFIXES:
 .SUFFIXES: .hex .elf .o
 
-vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS))
-vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS))
+vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(HOST-SRC-DIRS))
+vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(HOST-SRC-DIRS))
 
 %.o: %.c
 	@echo "     $(BOLD)cc$(NORM)" $(notdir $<)
@@ -124,7 +128,7 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS))
 
 %.o: %.cpp
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $($(TARGET)-FLAGS) -c -o $@ $<
 
 .SECONDARY:
 

@@ -38,8 +38,7 @@
  *       - verbose: test output
  */
 
-#ifndef TOOLS_COMMON_HPP_
-#define TOOLS_COMMON_HPP_
+#pragma once
 #include "cojson.hpp"
 
 namespace cojson {
@@ -342,17 +341,17 @@ namespace cojson {
 	}
 	template<>
 	inline constexpr const char* error_fmt<char16_t>() noexcept {
-		return "Error %X at position %d : '%.8us'\n";
+		return "Error %X at position %d : '%.8w'\n";
 	}
 	template<>
 	inline constexpr const char* error_fmt<char32_t>() noexcept {
-		return "Error %X at position %d : '%.8Us'\n";
+		return "Error %X at position %d : '%.8W'\n";
 	}
 
 	/**
 	 * Input stream for reading from constant string
 	 */
-	class cstream : public istream {
+	class cstream : public cojson::details::istream {
 	public:
 		inline cstream() noexcept
 			: pos(0), ptr(cstring(nullptr)), err(error_t::noerror) { }
@@ -381,7 +380,7 @@ namespace cojson {
 			if( e != error_t::eof )
 				Environment::instance().msg(
 					((e & error_t::blocked) != error_t::noerror
-					  ? LVL::verbose : LVL::debug), error_fmt<char_t>(), e, pos,
+					  ? LVL::verbose : LVL::debug), error_fmt<char_t>(), +e, pos,
 					ptr == nullptr ? ptr + (pos > 0 ? pos -1 : pos) : ptr);
 			err |= e;
 			if( ! isvirtual )
@@ -463,5 +462,3 @@ using namespace test;
 #	define CSTR(s) s
 #	define TSTR(s) s
 #endif
-
-#endif /* TOOLS_COMMON_HPP_ */

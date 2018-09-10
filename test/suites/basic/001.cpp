@@ -58,17 +58,17 @@ Test001 Test001::tests[] = {
 		return _R(structure<short>().write(env.output),env);			}),
 	RUN("integer limits: unsigned short", {
 		return _R(structure<unsigned short>().write(env.output),env);	}),
-	RUN("integer limits: long", {
-		return _R(structure<long>().write(env.output),env);				}),
-	RUN("integer limits: unsigned long", {
-		return _R(structure<unsigned long>().write(env.output),env);	}),
+	RUN("integer limits: int32_t", {
+		return _R(structure<int32_t>().write(env.output),env);				}),
+	RUN("integer limits: uint32_t", {
+		return _R(structure<uint32_t>().write(env.output),env);	}),
 	RUN("integer limits: long long", {
 		return _R(structure<long long>().write(env.output),env);		}),
 	RUN("integer limits: unsigned long long", {
 		return _R(structure<unsigned long long>().write(env.output),env);}),
 	RUN("overrun with local", {
 			env.setbuffsize(32);
-			bool pass = ! structure<long>().write(env.output);
+			bool pass = ! structure<int32_t>().write(env.output);
 			error_t errors = Test::expected(env.error(),error_t::eof);
 			return combine2(pass, errors == error_t::noerror,
 					error_t::noerror, errors);							}),

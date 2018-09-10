@@ -98,7 +98,7 @@ namespace cojson {
 			if( chr >= ' ' && chr != '"' && chr != '\\' )
 				return fputc(chr, out) == EOF;
 			if( fputc('\\', out) == EOF ) return !0;
-			char c = '0' + ((chr>>6) & 7);
+			char c = '0' + ((chr>>6) & 3);
 			bool oct = false;
 			switch(chr) {
 			case '\\': c = '\\'; break;

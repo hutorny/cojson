@@ -1,0 +1,291 @@
+html, body, body > div {
+	height: 100%;
+}
+
+body {
+	min-width: 680px;
+}
+
+#container {
+  margin-right: auto;
+  margin-left: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#container h3 {
+	padding-left: 10px;
+}
+
+#container > div:before {
+  display: table;
+  content: " ";
+}
+
+#editors-row {
+	height: calc(100% - 70px);
+}
+
+#json, #cpp {
+	height: 100%;
+}
+
+.cell {
+	display: table-cell; 
+}
+
+#top {
+	display: table-row;
+	width: 100%;
+}
+
+#info {
+    padding-right: 10px;
+    text-align: right;
+    font-family: monospace;
+    font-size: 0.7em;
+    vertical-align: middle; 	
+}
+
+#top .cell {
+	width: 100%;
+}
+
+#editors-row > div {
+	height: 100%;
+	float: left;
+}
+
+#actions {
+	width: 100px;
+	padding: 0;
+}
+#actions > * {
+	width: 100%;
+	text-align: left;
+	margin-bottom: 0.5em !important;
+	margin-top : 0 !important;
+	overflow: hidden;
+}
+
+.pane {
+	width: calc(50% - 50px);
+	padding-left: 10px;
+	padding-right: 10px;
+	min-width: 300px;
+}
+
+.ace_preproc {
+	color: rgb(127, 0, 85);
+}
+
+.ace_preproc ~ .ace_other {
+	color : rgb(0, 0, 128);
+}
+
+.ace_libsymbol {
+	color: rgb(20,100,20);
+	font-weight: bold;
+}
+.ace_storage, .ace_keyword {
+	font-weight: bold;
+}
+
+input#file {
+	opacity:0;
+	overflow: hidden;
+	line-height: 0;
+	height: 0;
+	max-height: 0;	
+}
+
+#terms {
+    position: absolute;
+    visibility:hidden;
+    display:none;
+	margin:  0 auto;
+	width:  600px; 
+	height:  calc(100% - 70px); 
+	z-index: 100;
+	top: 56px;
+	left: calc(50% - 300px);
+	padding: 8px;  
+	overflow: scroll;
+    background-color: whitesmoke;
+    border: solid 1px rgb(159,159,159);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "Trebuchet MS", sans-serif;	
+}
+
+#terms h3 {
+	font-family: monospace;
+	font-size: 	1.5em;
+	font-weight: bold;
+	border-bottom: 2px solid #666
+}
+
+#terms h4 {
+	font-family: monospace;
+	font-size: 	1.2em;
+	font-weight: bold;
+	border-bottom: 1px solid #666
+}
+
+#options {
+    position: absolute;
+    visibility:hidden;
+    display:none;
+	margin:  0 auto;
+	width:  240px; 
+	height:  300px; 
+	z-index: 50;
+	top: 130px;
+	right: calc(50% - 61px);
+	padding: 8px;  
+	overflow: hidden;
+    background-color: whitesmoke;
+    border: solid 3px rgb(0,100,0);
+    border-right: solid 1px rgb(159,159,159);
+    border-radius: 16px 0 0 16px;	
+}
+
+#terms:target,
+#options:target {
+    visibility: visible;
+    display: block;
+}
+
+#terms-close,
+#options-close {
+   	line-height: 1;
+    padding: 1px 3px;
+}
+
+#terms-close {
+	position: absolute;
+    top: 5px;
+    right: 5px;
+    display: none;	
+}
+
+#terms-accepted:checked ~ #terms-close {
+    display: block;	
+} 
+
+#options-close {
+    float: right;
+    position: relative;
+    right: -5px;
+}
+
+#options > div .input-group,
+#options > div .btn-group  {
+	line-height: 1;	
+	width: 100%;
+	margin-bottom: 4px;
+}
+
+#options > div .btn-group label {
+	width:  74px;
+	padding: 3px;
+}
+
+#options > div .btn-group label {
+	margin-left: -1px;
+}
+
+#options > div .btn-group label:first-of-type {
+	border-radius: 4px 0 0 0;
+	margin-left: 0px;
+}
+
+#options > div .btn-group label:last-of-type {
+	border-radius: 0 0 4px 0;
+}
+
+#options > div .btn-group label:nth-of-type(3) {
+	border-radius: 0 4px 0 0;
+}
+
+#options > div .btn-group label:nth-of-type(4) {
+	border-radius:  0 0 0 4px;
+	margin-left: 0px;
+}
+
+input[hidden] {
+	position: fixed;
+	left: 0;
+}
+
+#options > div  label {
+	font-family: monospace;
+	font-size: 0.8em;
+}
+
+#options > div input[type="text"] {
+	font-family: monospace;
+	font-size: 0.9em;
+	width: 100%;
+	font-weight: bold;
+}
+
+#avr-checkbox,
+#example-checkbox {
+	float: right;
+	clear: right;
+	margin-top: 2px;
+}
+
+input[type="checkbox"] ~ .glyphicon {
+	font-size: 1.5em;
+	color: rgb(62, 143, 62);
+}
+
+input[type="checkbox"]:not(:checked) ~ .glyphicon-check {
+	display: none;
+}
+
+input[type="checkbox"]:checked ~ .glyphicon-unchecked {
+	display: none;
+}
+
+input:not(:checked) ~ label {
+	
+}
+
+input[hidden] + label {
+	opacity: 0.8;
+	filter: grayscale(30%);
+}
+
+input[hidden]:checked + label,
+input[hidden]:checked + label:hover,
+input[hidden]:checked + label:active {
+	color: yellow;
+}
+
+input[hidden]:checked + label {
+	opacity: 1;
+	filter: none;
+}
+
+@media (max-width: 999px) {
+.pane {
+	width: calc(50% - 20px);	  
+}
+#actions {
+	width: 40px;
+}
+.lbl {
+	display: none;
+}
+#options {
+    right: calc(50% - 31px);
+}
+}
+@media (max-width: 680px) {
+#options {
+    left: 131px;
+}
+}

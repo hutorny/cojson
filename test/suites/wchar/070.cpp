@@ -19,9 +19,9 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "test.hpp"
-#include "host-env.hpp"
 #include <wchar.h>
+#include "host-env.hpp"
+#include "test.hpp"
 
 #define WNAME(s) static inline constexpr const char_t* s() noexcept {return L"" #s;}
 
@@ -33,13 +33,21 @@ WNAME(s)
 
 
 namespace cojson {
+namespace details {
+template<>
+bool ostream::puts<const char*>(const char* v) noexcept {
+	while(*v) if(! put(*v++) ) return false;
+	return true;
+}
+}
+
 namespace test {
 //int fputcw(wchar_t c, FILE* o) { return fputwc(c,o); }
 template<>
 bool HostEnvironment::put<wchar_t>(char_t chr, FILE* out) const noexcept {
 	/* combination of wchar_t char_t used to catch misconfiguration for
 	 * this test															 */
-	char mb[MB_CUR_MAX];
+	char mb[8 /*MB_CUR_MAX */]; // MB_CUR_MAX is not a constant anymore
 	int n = wctomb(mb, chr);
 	if( n < 0 ) {
 		msg(verbosity::silent,"ERR:\tinvalid character %X\n", chr);

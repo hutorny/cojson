@@ -56,6 +56,7 @@ struct names<const char*> {
 	}
 };
 
+#if __AVR__
 template<>
 struct names<progmem<char>> {
 	static progmem<char> strname() noexcept {
@@ -72,7 +73,7 @@ struct names<progmem<char>> {
 		return progmem<char>(s);
 	}
 };
-
+#endif
 
 static const value& strings() {
 	return V<str_get>();
@@ -148,7 +149,7 @@ Test002 Test002::tests[] = {
 	RUN("array of various", {
 		return _R(array2().write(env.output),env);		}),
 	RUN("strings", {
-		return _R(strings().write(env.output),env);		}),
+		return _R(::strings().write(env.output),env);		}),
 	RUN("simple object", {
 		return _R(simple().write(env.output),env);		}),
 	RUN("complex object", {

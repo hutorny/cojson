@@ -108,7 +108,7 @@ Test004 Test004::tests[] = {
 	RUN("array of various", {
 		return _R(array2().write(env.output), env);		}),
 	RUN("strings", {
-		return _R(strings().write(env.output), env);	}),
+		return _R(::strings().write(env.output), env);	}),
 	RUN("simple object", {
 		return _R(simple().write(env.output), env);		}),
 	RUN("complex object", {

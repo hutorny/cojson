@@ -342,8 +342,7 @@ void loop() {
 
 }
 
-void dbg(const char *fmt, ...) noexcept	__attribute__ ((format (printf, 1, 2)));
-void dbg(const char *fmt, ...) {
+void dbg(const char *fmt, ...) noexcept {
 	va_list args;
 	va_start(args, fmt);
 	cerr.putf(fmt, args);

@@ -33,6 +33,8 @@ NORM:=$(shell tput sgr0)
 FIND = find /opt/arduino* \( -readable -or \! -prune \) \
   \( -type f -o -type l \) -name  $(PREFIX)g++$(SUFFIX) | tail -1
 
+MEGA-SRC-DIRS :=															\
+  $(BASE-DIR)/../src/platforms/avr										\
 
 CXX-FIX := $(realpath $(BASE-DIR)/../include)
 MAKEFLAGS += --no-builtin-rules
@@ -120,19 +122,21 @@ COJSON-OBJS :=																\
   common.o 																	\
   cojson.o																	\
   cojson_libdep.o															\
+  cojson_progmem.o															\
+  elemental_progmem.o														\
+  chartypetable_progmem.o													\
 
 OBJS :=																		\
   $(COJSON-OBJS)															\
   $(ARDUINO-OBJS)															\
   arduino.o 																\
   avrcppfix.o 																\
-  chartypetable_progmem.o													\
 
 megab-OBJS := 																\
   080.o																		\
-  cojson_progmem.o															\
 
 megaa-OBJS := 																\
+  031.o																		\
   032.o																		\
   033.o																		\
   034.o																		\
@@ -148,28 +152,20 @@ mega-OBJS := 																\
   004.o																		\
   004.cpp.o																	\
   005.o																		\
+  006.o																		\
   030.o																		\
-  031.o																		\
 
 megap-OBJS := 																\
-  cojson_progmem.o															\
   $(mega-OBJS)																\
 
 megaq-OBJS := 																\
-  cojson_progmem.o															\
   $(megaa-OBJS)																\
 
-megar-OBJS := 																\
-  010.o																		\
-  micurest.o																\
-  cojson_progmem.o															\
-  micurest_progmem.o														\
-
 mega-DEFS :=																\
-  COJSON_TEST_OMIT_NAMES													\
+  CSTRING_PROGMEM COJSON_TEST_OMIT_NAMES									\
 
 megaa-DEFS :=																\
-  COJSON_TEST_OMIT_NAMES													\
+  CSTRING_PROGMEM COJSON_TEST_OMIT_NAMES									\
 
 megab-DEFS :=																\
   CSTRING_PROGMEM															\
@@ -192,9 +188,6 @@ megap-INCLUDES :=															\
 megaq-INCLUDES :=															\
   $(BASE-DIR)/suites/basic													\
 
-megar-INCLUDES :=															\
-  $(BASE-DIR)/suites/basic													\
-
 100.o : FILE-FLAGS:=-Wno-overflow
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
@@ -205,12 +198,14 @@ METRIC-OBJS :=																\
   $(COJSON-OBJS)															\
   avrcppfix.o 																\
   chartypetable_progmem.o													\
+  elemental_progmem.o														\
+  cojson_progmem.o															\
 
 METRIC-FLAGS :=																\
   -Wl,--gc-sections			 												\
 
-vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
-vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(ARDUINO-DIR))
+vpath %.cpp $(subst $(eval) ,:,$(SRC-DIRS) $(MEGA-SRC-DIRS) $(ARDUINO-DIR))
+vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(MEGA-SRC-DIRS) $(ARDUINO-DIR))
 
 .DEFAULT:
 

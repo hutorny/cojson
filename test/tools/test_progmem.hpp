@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015,2017 Eugene Hutorny <eugene@hutorny.in.ua>
  *
- * chartypetable.cpp - char type table populated at build-time
+ * test.hpp - cojson tests, shared definitions
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
  *
@@ -19,25 +19,20 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include <stdint.h>
-#include "cojson.hpp"
-
-using namespace cojson;
-using namespace details;
-
-static const int_fast16_t chartypes[128] = {
-#include "chartypetable.inc"
+#pragma once
+template<>
+struct integer_limits_names<progmem<char>> {
+	static inline progmem<char> min() {
+		static const char s[] __attribute__((progmem)) ="min";
+		return progmem<char>(s);
+	}
+	static inline progmem<char> max() {
+		static const char s[] __attribute__((progmem)) ="max";
+		return progmem<char>(s);
+	}
+	static inline progmem<char> pot() {
+		static const char s[] __attribute__((progmem)) ="pot";
+		return progmem<char>(s);
+	}
 };
-
-namespace cojson {
-namespace details {
-ctype chartype(char_t c) noexcept {
-	if(static_cast<size_t>(c) >= countof(chartypes)) return ctype::string;
-	return static_cast<ctype>(chartypes[(size_t)c]);
-}
-}
-}
-
-
-
 

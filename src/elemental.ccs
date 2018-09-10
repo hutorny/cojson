@@ -1,0 +1,56 @@
+/*
+ * Copyright (C) 2017-2018 Eugene Hutorny <eugene@hutorny.in.ua>
+ *
+ * elemental.ccs - cascaded configuration for COJSON and µcuREST
+ *
+ * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
+ *
+ * The COJSON Library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License v2
+ * as published by the Free Software Foundation;
+ *
+ * The COJSON Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License v2
+ * along with the COJSON Library; if not, see
+ * <http://www.gnu.org/licenses/gpl-2.0.html>.
+ */
+
+#pragma once
+#include <ccs.hpp>
+
+namespace elemental {
+struct config;
+/**
+ * Default elemental configuration
+ */
+struct default_config {
+	/** character type: char, wchar_t or char16_t						*/
+	typedef char char_t;
+
+	/** controls where the constant strings are retrieved from */
+	static constexpr enum class cstring_is {
+		const_char, /** default, as provided by compiler  				*/
+		avr_progmem	/** from the program memory.
+		Note! This option for AVR only, all strings are expected to be
+		properly placed in progmem with __attribute__((progmem))		*/
+	} cstring = 
+#		if __AVR__	
+			cstring_is::avr_progmem;
+#		else
+			cstring_is::const_char;
+#		endif	
+private:
+	default_config();
+};
+}
+
+namespace configuration {
+	template<typename target, typename build>
+	struct Configuration<elemental::config, target, build> 
+	  : elemental::default_config {};	
+}

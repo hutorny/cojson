@@ -1,114 +1,45 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015-2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * cojson.hpp - main header file
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License v2
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#ifndef COJSON_HPP_
-#define COJSON_HPP_
-#ifndef COJSON_HELPERS_HPP_
-#	include "cojson_helpers.hpp"
-#endif
-#pragma GCC diagnostic ignored "-Wattributes"
+#pragma once
+#include <configuration.h>
+#include <cojson.ccs>
+#include <elemental.hpp>
+#include <cojson_helpers.hpp>
 
 namespace cojson {
-	/**
-	 * Default cojson configuration
-	 */
-	struct default_config {
-		/** character type: char, wchar_t or char16_t						*/
-		typedef char char_t;
 
-		/** controls where the constant strings are retrieved from */
-		static constexpr enum class cstring_is {
-			const_char, /** default, as provided by compiler  				*/
-			avr_progmem	/** from the program memory.
-			Note! This option for AVR only, all strings are expected to be
-			properly placed in progmem with __attribute__((progmem))		*/
-		} cstring = cstring_is::const_char;
-
-		/** controls behavior on integral overflow 							*/
-		static constexpr enum class overflow_is {
-			ignored, 	/** overflow condition is silently ignored			*/
-			error, 		/** overflow causes an error						*/
-			saturated	/**	numbers are saturated on overflow				*/
-		} overflow = overflow_is::ignored;
-
-		/** controls implementation of iostate::error						*/
-		static constexpr enum class iostate_is {
-			_notvirtual,/** iostate::error is implemented as non-virtual	*/
-			_virtual,	/** iostate::error is implemented as virtual		*/
-		} iostate = (sizeof(double) == sizeof(float)) ?
-				iostate_is::_notvirtual : iostate_is::_virtual;
-
-		/** controls behavior on read encountered element mismatching
-		 *	targed data type												*/
-		static constexpr enum class mismatch_is {
-			skipped,
-			error
-		} mismatch = mismatch_is::skipped;
-
-		/** controls default null handling.
-		 *  could be overridden in a custom accessor						*/
-		static constexpr enum class null_is {
-			skipped, 	/** overflow condition is silently ignored			*/
-			error, 		/** overflow causes an error						*/
-		} null = null_is::skipped;
-
-		/** controls implementation of temporary buffer, used for reading
-		 * 	names and writing floating data types							*/
-		static constexpr enum class temporary_is {
-			_static,	/**	temporary buffer preallocated in static data	*/
-			_automatic	/**	temporary buffer allocated on the stack 		*/
-		} temporary = (sizeof(double) < 8) ?
-		 /* by default temporary buffer is static on low end CPU (AVR 8 bit).
-		  * sizeof(double) is used as indication of lowendness				*/
-			temporary_is::_static : temporary_is::_automatic;
-
-		/** controls size of temporary buffer								*/
-		static constexpr unsigned temporary_size = 24; /* double should fit */
-
-		static constexpr enum class write_double_impl_is {
-			internal,
-			with_sprintf,
-			external
-		} write_double_impl = write_double_impl_is::internal;
-		using write_double_integral_type = uint32_t;
-		static constexpr unsigned write_double_precision = 6;
-	private:
-		default_config();
-	};
-
-
-	struct config : default_config {
-	/************************************************************************/
-	/* configuration is externalized for the purpose of separate versioning	*/
-#		include <cojson.config>
-	/************************************************************************/
-	public:
+	struct config : configuration::Configuration<config> {
 		static constexpr bool null_is_error = null == null_is::error;
 	private:
+		static auto constexpr achievable_precision = details::numeric_helper<write_double_integral_type>::digits - 1;
+		static_assert(write_double_precision <= achievable_precision
+				|| write_double_impl != write_double_impl_is::internal,
+				"Requested write_double_precision precision is not achievable with given write_double_integral_type");
 		config();
 	};
 
-
 typedef config::char_t char_t;
-typedef unsigned size_t; /* unsigned char may save up to 500 bytes on avr */
+using elemental::size_t;
 
 /* void type and value to be used in templates instead of destination class */
 const struct void_t {} void_v {};
@@ -131,6 +62,7 @@ struct pointer {
 	static constexpr bool canrref   = true;
 	static constexpr bool is_vector = false;
 	static inline bool has() noexcept { return true; }
+	static inline bool is() noexcept { return true; }
 	static inline T& lref() noexcept { return *P; }
 	static inline const T& rref() noexcept { return *P; }
 	static inline T get() noexcept { return *P; }
@@ -161,6 +93,8 @@ struct reference {
 	static constexpr bool is_vector = false;
 	/** should return false if get is not applicable */
 	static inline constexpr bool has() noexcept { return true; }
+	/** should return false if set is not applicable */
+	static inline constexpr bool is() noexcept { return true; }
 	static inline T get() noexcept { return G(); }
 	static inline T& lref() noexcept { return G(); }
 	static inline const T& rref() noexcept { return G(); }
@@ -186,6 +120,7 @@ struct function {
 	static constexpr bool canrref   = true;
 	static constexpr bool is_vector = false;
 	static inline bool has() noexcept { return G() != nullptr; }
+	static inline bool is() noexcept { return has(); }
 	static inline T& lref() noexcept { return *G(); }
 	static inline const T& rref() noexcept { return *G(); }
 	static inline T get() noexcept { return *G(); }
@@ -217,6 +152,7 @@ struct field {
 	static constexpr bool canrref   = true;
 	static constexpr bool is_vector = false;
 	static inline constexpr bool has() noexcept { return true; }
+	static inline constexpr bool is() noexcept { return true; }
 	static inline void init(T&) noexcept { }
 	static inline T get(const C& o) noexcept { return o.*V; }
 	static inline T& lref(C& o) noexcept { return o.*V; }
@@ -244,6 +180,7 @@ struct methods {
 	static constexpr bool canrref= false;
 	static constexpr bool is_vector = false;
 	static inline constexpr bool has() noexcept { return true; }
+	static inline constexpr bool is() noexcept { return true; }
 	static inline T get(const C& o) noexcept { return (o.*G)(); }
 	static T& lref(const C& o) noexcept; 		/* not possible */
 	static const T& rref(const C&) noexcept;	/* not possible */
@@ -269,6 +206,7 @@ struct vector {
 	static constexpr bool canrref   = true;
 	static constexpr bool is_vector = true;
 	static inline bool has(size_t i) noexcept { return V(i) != nullptr; }
+	static inline bool is(size_t i) noexcept { return has(i); }
 	static inline const T get(size_t i) noexcept { return *V(i); }
 	static inline T& lref(size_t i) noexcept { return *V(i); }
 	static inline const T& rref(size_t i) noexcept { return *V(i); }
@@ -295,6 +233,7 @@ struct array {
 	static constexpr bool canrref   = true;
 	static constexpr bool is_vector = true;
 	static inline bool has(size_t i) noexcept { return i < N; }
+	static inline bool is(size_t i) noexcept { return has(i); }
 	static inline const T get(size_t i) noexcept { return A[i]; }
 	static inline T& lref(size_t i) noexcept { return A[i]; }
 	static inline const T& rref(size_t i) noexcept { return A[i]; }
@@ -321,6 +260,7 @@ struct functions {
 	static constexpr bool canrref   = false;
 	static constexpr bool is_vector = false;
 	static inline constexpr bool has() noexcept { return true; }
+	static inline constexpr bool is() noexcept { return true; }
 	static inline const T get() noexcept { return G(); }
 	static const T& rref() noexcept;
 	static T& lref() noexcept;
@@ -338,9 +278,9 @@ private:
 namespace details {
 /** JSON char traits. returned by lexer and used by readers */
 static constexpr int bit(int N) noexcept { return 1 << N; }
-
-typedef std::conditional<config::cstring == config::cstring_is::avr_progmem,
-		progmem<char_t>, const char_t*>::type cstring;
+using elemental::cstring;
+using elemental::progmem;
+using elemental::match;
 
 typedef std::conditional<config::cstring == config::cstring_is::avr_progmem,
 		progmem<char_t>, char_t>::type char_l;
@@ -423,6 +363,7 @@ struct literal : literal_strings<char_l> {
 	static constexpr char_t digitA			= 'A'; /** A 					  */
 	static constexpr char_t digita			= 'a'; /** A 					  */
 	static constexpr char_t ws 				= ' ';
+	static constexpr char_t slash 			= '/';
 
 	/* the characters that must be escaped:
 	 * quotation mark, reverse solidus,
@@ -468,7 +409,8 @@ struct literal : literal_strings<char_l> {
 	}
 
 	static inline constexpr bool is_control(char_t c) {
-		return c < ws;
+		using uchar_t = std::make_unsigned<char_t>::type;
+		return static_cast<uchar_t>(c) < static_cast<uchar_t>(ws);
 	}
 private:
 	literal();
@@ -499,7 +441,7 @@ typedef const member& (*node)();
 /**
  * name type - a function returning pointer to a name
  */
-typedef cstring (*name)();
+using elemental::name;
 
 /**
  * Error codes
@@ -546,7 +488,7 @@ static inline constexpr unsigned char operator+(error_t v) noexcept {
 	return static_cast<unsigned char>(v);
 }
 
-template<config::iostate_is V = config::iostate>
+template<config::iostate_is V>
 class iostate_t;
 
 /**
@@ -555,6 +497,7 @@ class iostate_t;
 template<>
 struct iostate_t<config::iostate_is::_virtual> : noncopyable {
 	static constexpr bool isvirtual = true;
+	inline iostate_t() : err(error_t::noerror) {}
 	virtual void error(error_t e) noexcept { err |= e; }
 	virtual error_t error() const noexcept { return err; }
 	virtual void clear() noexcept { err = error_t::noerror; }
@@ -569,6 +512,7 @@ private:
 template<>
 struct iostate_t<config::iostate_is::_notvirtual> : noncopyable {
 	static constexpr bool isvirtual = false;
+	inline iostate_t() : err(error_t::noerror) {}
 	inline void error(error_t e) noexcept { err |= e; }
 	inline error_t error() const noexcept { return err; }
 	inline void clear() noexcept { err = error_t::noerror; }
@@ -579,7 +523,7 @@ private:
 /**
  * iostate selector per configuration
  */
-struct iostate : iostate_t<> {
+struct iostate : iostate_t<configuration::Configuration<config>::iostate> {
 	static constexpr char_t eos_c = -1; /* end of stream character */
 	static constexpr char_t err_c = -2; /* i/o error character */
 	inline bool isgood() const noexcept {
@@ -621,10 +565,10 @@ struct ostream : virtual iostate {
 	 * writes a zero-terminated string to the stream.
 	 * returns true on success or false on error
 	 */
-	inline bool put(const char_t* s) noexcept { return puts(s); }
-	bool puts(const char_t* s) noexcept;
-	template<class C>
+	template<typename C>
 	bool puts(C s) noexcept;
+protected:
+	virtual bool _puts(const char_t* s) noexcept;
 };
 
 template<>
@@ -632,29 +576,33 @@ bool ostream::puts<progmem<char>>(progmem<char>) noexcept;
 
 template<>
 inline bool ostream::puts<char_t*>(char_t* v) noexcept {
-	return puts(const_cast<const char_t*>(v));
+	return _puts(const_cast<const char_t*>(v));
 }
 
-template<size_t N, config::temporary_is = config::temporary>
+template<>
+inline bool ostream::puts<const char_t*>(const char_t* v) noexcept {
+	return _puts(v);
+}
+
+
+template<typename T, size_t N, bool Static>
 struct temporary_s {
 	static constexpr size_t size = N;
-	inline operator char_t*() noexcept { return buffer; }
-	inline operator const char_t*() const noexcept { return buffer; }
-	char_t buffer[N];
+	typedef T type[N];
+	inline operator type&() noexcept { return buffer; }
+	T buffer[N] = {};
 };
 
-template<size_t N>
-struct temporary_s<N, config::temporary_is::_static> {
+template<typename T, size_t N>
+struct temporary_s<T, N, true> {
 	static constexpr size_t size = N;
-	inline operator char_t*() noexcept { return buffer; }
-	inline operator const char_t*() const noexcept { return buffer; }
-	static char_t buffer[N];
+	typedef T type[N];
+	inline operator type&() noexcept {
+		static T buffer[N] = {};
+		return buffer;
+	}
 };
 
-template<size_t N>
-char_t temporary_s<N,config::temporary_is::_static>::buffer[N];
-
-struct temporary : temporary_s<config::temporary_size> {};
 
 enum class ctype : int {
 	unknown		= 0,
@@ -731,9 +679,9 @@ struct lexer : noncopyable {
 	inline lexer(istream& in) noexcept : stream(in), hold(0) {}
 
 	static inline void char_typify(
-		void (*add)(const char * str,ctype traits)noexcept) noexcept {
+		void (*add)(const char * str,ctype traits)) noexcept {
 		add("\t\n\r ",		ctype::whitespace);
-		add("btfnru\"\\",	ctype::special);
+		add("btfnru\"\\/",	ctype::special);
 		//add("\"\\",			ctype::escaped);
 		add("tfn-0123456789{[\"", ctype::value);
 		add("true", 		ctype::boolean);
@@ -774,7 +722,7 @@ struct lexer : noncopyable {
 		return ct;
 	}
 	inline bool skip(ctype mask) noexcept {
-		char_t tmp;
+		char_t tmp {};
 		ctype ct = skip(tmp, mask);
 		if( ct > ctype::unknown ) {
 			back(tmp);
@@ -824,9 +772,16 @@ struct lexer : noncopyable {
 		hold = chr;
 	}
 
+	inline char_t hexremainder() noexcept {
+		char_t res = hold;
+		hold = 0;
+		return res;
+	}
+
 	static constexpr bool is_null(char_t chr) noexcept {
 		return chr == literal_strings<char_t>::null_l()[0];
 	}
+
 
 private:
 	ctype unescape(char_t& chr ) noexcept;
@@ -837,10 +792,14 @@ private:
 	static inline constexpr bool is_valid(int ct) noexcept {
 		return cojson::details::isvalid(static_cast<ctype>(ct));
 	}
-
+	static inline bool readable(const istream & in) noexcept;
+	static constexpr bool mismatch_is_error =
+		configuration::Configuration<lexer>::mismatch ==
+				config::mismatch_is::error;
 private:
+	using cfg = configuration::Configuration<lexer>;
 	istream& stream;
-	temporary name;
+	temporary_s<char_t, cfg::max_key_length, cfg::temporary_static> name;
 	char_t hold;
 };
 
@@ -875,9 +834,18 @@ static inline bool tenfold(T& val, T digit) noexcept {
 
 /******************************************************************************/
 /* JSON readers																  */
+template<typename T, bool isgood=detectors::has_read<T,lexer&>::value>
+struct reader;
 
 template<typename T>
-struct reader {
+struct reader<T,true> {
+	static inline bool read(T& val, lexer& in) noexcept {
+		return val.read(in);
+	}
+};
+
+template<typename T>
+struct reader<T,false> {
 	/**
 	 * Reads value of given type from the input stream.
 	 * Type of the value is expected to match data type
@@ -902,7 +870,7 @@ struct reader {
 			return false;
 		case ctype::delim:
 			if( !isws(digit) ) in.back(digit);
-			/* no break */
+			/* FALLTHRU */
 		case ctype::eof:
 			return true;
 		case ctype::digit:
@@ -941,9 +909,9 @@ struct reader<double> {
 template<>
 struct reader<float> {
 	static inline bool read(float& val, lexer& in) noexcept {
-		double tmp = 0;
+		double tmp {};
 		if( ! reader<double>::read(tmp,in) ) return false;
-		val = tmp;
+		val = tmp; //FIXME double may overflow leaving val=inf
 		return true;
 	}
 };
@@ -986,18 +954,29 @@ bool write_number(T val, bool negative, T divider, ostream& out) noexcept {
 
 	}
 	return true;
-} /* avr: 152 bytes for int, 748 bytes for long */
+}
 
 /******************************************************************************/
 /* JSON writers																  */
+
+template<typename T, bool isgood=detectors::has_write<const T&,ostream&>::value>
+struct writer;
+
 template<typename T>
-struct writer {
+struct writer<T, true> {
+	static bool write(const T& val, ostream& out) noexcept {
+		return val.write(out);
+	}
+};
+
+template<typename T>
+struct writer<T, false> {
 	/** write single value. Default implementation for integral numbers */
 	static bool write(const T& val, ostream& out) noexcept {
 		static_assert(std::is_integral<T>::value,
 			"Default writer implementation supports integral types only");
 		typedef numeric_helper<T> H;
-		typedef typename H::U U;;
+		typedef typename H::U U;
 		return write_number<U>(H::abs(val),H::is_negative(val), H::pot, out);
 	}
 };
@@ -1039,17 +1018,23 @@ struct writer<bool> {
 	}
 };
 
-/**
- * helper for getting array extent
- */
-template<class C, typename T, size_t N>
-static inline constexpr size_t countof(T (C::*)[N]) noexcept { return N; }
+using elemental::countof;
 
-/**
- * helper for getting array extent
- */
+static inline constexpr char_t ashex(char_t v) noexcept {
+	return v + (v > 9 ? (literal::digitA - 10) : literal::digit0);
+}
+
 template<typename T, size_t N>
-static inline constexpr size_t countof(T (&)[N]) noexcept  { return N; }
+static inline void assign(T (&a)[N], const T (&v)[N]) noexcept  {
+	for(size_t i=0; i<N; ++i) a[i] = v[i];
+}
+
+template<typename T, size_t N>
+static inline bool compare(const T (&a)[N], const T (&v)[N]) noexcept  {
+	for(size_t i=0; i<N; ++i) if( !(a[i] == v[i]) ) return false;
+	return true;
+}
+
 
 } /* namespace details */
 using lexer = details::lexer;
@@ -1137,7 +1122,7 @@ struct collection {
 			in.error(error_t::mismatch);
 			return false;
 		}
-		char_t chr;
+		char_t chr = {};
 		in.get(chr, I::middle);
 		if( ! in.skipws(chr) ) return false;
 		if( chr == I::finish ) return true;
@@ -1150,7 +1135,7 @@ struct collection {
 			if( ! id.prolog(in) ) return false;
 			if( s.read(dst, in, id++) ) continue;
 			if( in.skip(I::skiplist) ) continue;
-			/* no break */
+			/* FALLTHRU */
 		default:
 			return false;
 		} while( isvalid(ct=in.skip(chr, ctype::whitespace))
@@ -1221,6 +1206,20 @@ private:
 };
 
 /**
+ * JSON empty array []
+ */
+struct emptyarray : value {
+	emptyarray() {}
+	inline bool read(lexer& in) const noexcept {
+		return in.skip();
+	}
+	inline bool write(ostream& out) const noexcept {
+		return out.put(literal::begin_array) && out.put(literal::end_array);
+	}
+};
+
+
+/**
  * JSON member - a named element in an object
  */
 struct member {
@@ -1269,6 +1268,20 @@ private:
 };
 
 /**
+ * JSON empty object {}
+ */
+struct emptyobject : value {
+	emptyobject() {}
+	inline bool read(lexer& in) const noexcept {
+		return in.skip();
+	}
+	inline bool write(ostream& out) const noexcept {
+		return out.put(literal::begin_object) && out.put(literal::end_object);
+	}
+};
+
+
+/**
  * property - a named property of c++ class or structure
  */
 template<class C>
@@ -1299,7 +1312,7 @@ struct clas : noncopyable {
 		return collection<indexer>::read(*this, obj, in);
 	}
 	bool write(const C& obj, ostream& out) const noexcept {
-		bool r = true;
+		bool r = (size!=0) || object::dlm(true, out);
 		for(size_t i = 0; i < size && r; ++i) {
 			const property<C>& prop(nodes[i]());
 			r = object::dlm(i==0, out) 			&&
@@ -1334,9 +1347,12 @@ template<class X>
 struct scalar : value {
 	typedef typename X::type T;
 	bool read(lexer& in) const noexcept {
-		if( X::canlref && X::has() ) {
-			return reader<T>::read(X::lref(), in);
-		} else if( X::canset ) {
+		if( X::canlref ) {
+			if ( X::is() ) {
+				return reader<T>::read(X::lref(), in);
+			}
+		}
+		if( X::canset ) {
 			T v;
 			X::init(v);
 			if( reader<T>::read(v, in) ) {
@@ -1391,13 +1407,51 @@ struct string : value {
 	inline bool null() const noexcept {
 		if( str != nullptr )
 			*str = 0;
-		return true;
+		return ! config::null_is_error;
 	}
 
 private:
 	char_t* const str;
 	const size_t size;
 };
+
+/** XXX
+ * Read-only vector of strings, accessible via function F
+ *
+template<const char* (*F)(size_t) noexcept>
+struct strings : value {
+	bool read(lexer& in) const noexcept {
+		in.error(error_t::noobject);
+		return false;
+	}
+	bool write(ostream& out) const noexcept {
+		size_t i = 0;
+		const char* v = F(0);
+		while( array::dlm(i==0, out) && (v != nullptr) &&
+			writer<const char*>::write(v, out) && ((v=F(++i))!= nullptr));
+		return array::end(out);
+	}
+};
+*/
+
+/** XXX
+ * Read-only vector of strings, accessible via function F
+ *
+template<cstring (*F)(size_t) noexcept>
+struct cstrings : value {
+	bool read(lexer& in) const noexcept {
+		in.error(error_t::noobject);
+		return false;
+	}
+	bool write(ostream& out) const noexcept {
+		size_t i = 0;
+		cstring v = F(0);
+		while( array::dlm(i==0, out) && (v != nullptr) &&
+			writer<cstring>::write(v, out) && ((v=F(++i))!= nullptr));
+		return array::end(out);
+	}
+};
+*/
 
 /**
  * property read/write implementation based on externalized accessor X
@@ -1407,9 +1461,12 @@ struct propertyx : property<typename X::clas> {
 	typedef typename X::type T;
 	typedef typename X::clas C;
 	bool read(C& obj, lexer& in) const noexcept {
-		if( X::canlref && X::has() ) {
-			return reader<T>::read(X::lref(obj), in);
-		} else if( X::canset ) {
+		if( X::canlref ) {
+			if( X::is() ) {
+				return reader<T>::read(X::lref(obj), in);
+			}
+		}
+		if( X::canset ) {
 			T v;
 			X::init(v);
 			if( reader<T>::read(v, in) ) {
@@ -1431,6 +1488,70 @@ struct propertyx : property<typename X::clas> {
 		return value::null(out);
 	}
 };
+
+/**
+ * JSON array-list in a class
+ */
+template<class C>
+struct list : property<C> {
+	typedef typename property<C>::node node;
+	inline list(const node* const nodelist, size_t length) noexcept
+		: nodes(nodelist), size(length) {}
+
+	bool read(C& obj, lexer& in) const noexcept {
+		return collection<>::read(*this, obj, in);
+	}
+	bool write(const C& obj, ostream& out) const noexcept {
+		return write(*this, obj, out);
+	}
+
+	template<class A>
+	static inline bool write(const A& agent,
+							 const C& obj, ostream& out) noexcept {
+		size_t i = 0;
+		while(array::dlm(i==0, out) && agent.write(obj,out,i++));
+		return array::end(out);
+	}
+	static inline bool dlm(bool first, ostream& out) noexcept {
+		return out.put(first ? literal::begin_array : literal::value_separator);
+	}
+	static inline bool end(ostream& out) noexcept {
+		return out.put(literal::end_array);
+	}
+
+	/** write array implementation with item writing delegated to agent */
+	template<class A>
+	static inline bool write(const A& agent, ostream& out) noexcept {
+		size_t i = 0;
+		while( array::dlm(i==0, out) && agent.write(out,i++));
+		return array::end(out);
+	}
+private:
+	friend class collection<>;
+
+	/** read array item implementation, returns false when last item read */
+	inline bool read(C& obj, lexer& in, size_t i) const noexcept {
+		if( i < size ) {
+			if( nodes[i]().read(obj, in) )
+				return true;
+			return in.skip(false);
+		} else {
+			in.error(error_t::overrun);
+			return false;
+		}
+	}
+
+	inline bool write(const C& obj, ostream& out, size_t i) const noexcept {
+		if( i < size )
+			nodes[i]().write(obj, out);
+		return i+1 < size;
+	}
+
+private:
+	const node* const nodes;
+	const size_t size;
+};
+
 
 /**
  * vector read/write implementation based on externalized accessor X
@@ -1460,8 +1581,8 @@ private:
 	static inline bool null(void_t) noexcept { return X::null(void_v); }
 	/** read item */
 	inline bool read(void_t, lexer& in, size_t i) const noexcept {
-		if( X::has(i) ) {
-			T tmp;
+		if( X::is(i) ) {
+			T tmp {};
 			X::init(tmp);
 			if( reader<T>::read(tmp, in) ) {
 				X::set(i,tmp);
@@ -1474,18 +1595,25 @@ private:
 		}
 	}
 	inline bool write(ostream& out, size_t i) const noexcept {
-		writer<T>::write(X::get(i), out);
-		return X::has(i+1);
+		return X::has(i) && writer<T>::write(X::get(i), out) && X::has(i+1);
 	}
 
 };
+
+template<class X, bool V>
+struct values_selector;
+
+template<class X>
+struct values_selector<X, true> : vector<X> {};
+
+template<class X>
+struct values_selector<X, false> : scalar<X> {};
 
 /**
  * value implementation selector based on accessor type
  */
 template<class X>
-struct values : scalar<X> {};
-//  : std::conditional<X::is_vector, vector<X>, scalar<X>>::type { };
+struct values : values_selector<X,X::is_vector> {};
 
 /**
  * object as a value read/write implementation based on externalized accessor X
@@ -1493,12 +1621,13 @@ struct values : scalar<X> {};
 template<class X, const clas<typename X::clas>& (*S)() noexcept>
 struct objectval : value {
 	bool read(lexer& in) const noexcept {
-		if( X::canlref && X::has() ) {
-			return S().read(X::lref(), in);
-		} else {
-			in.error(error_t::noobject);
-			return in.skip();
+		if( X::canlref ) {
+			if ( X::is() ) {
+				return S().read(X::lref(), in);
+			}
 		}
+		in.error(error_t::noobject);
+		return in.skip();
 	}
 	bool write(ostream& out) const noexcept {
 		if( X::canrref && X::has() ) {
@@ -1538,15 +1667,24 @@ private:
 	friend class collection<>;
 
 	inline bool read(const void_t&, lexer& in, size_t i) const noexcept {
-		if( X::has(i) ) {
-			if( S().read(X::lref(i), in) )
-				return true;
-			else
-				return in.skip(false);
-		} else {
-			in.error(error_t::overrun);
-			return false;
+		if( X::canlref ) {
+			if( X::is(i) ) {
+				if( S().read(X::lref(i), in) )
+					return true;
+				else
+					return in.skip(false);
+			}
+		} else if( X::canset ) {
+			typename X::type tmp {} ;
+				if( S().read(tmp, in) ) {
+					X::set(i, tmp);
+					return true;
+				} else
+					return in.skip(false);
+
 		}
+		in.error(error_t::overrun);
+		return false;
 	}
 	template<typename T>
 	static inline constexpr bool null(T v) noexcept {
@@ -1554,7 +1692,7 @@ private:
 	}
 
 	inline bool write(ostream& out, size_t i) const noexcept {
-		return S().write(X::get(i), out) && X::has(i+1);
+		return X::has(i) && S().write(X::get(i), out) && X::has(i+1);
 	}
 };
 
@@ -1566,22 +1704,25 @@ struct objects
 
 }
 
+namespace details {
+
 /**
  * scalar class property
  */
+
 template<class C, details::name id, typename T, T C::*V>
-const details::property<C> & P() noexcept {
+inline const details::property<C> & PropertyScalarMember() noexcept {
 	static const struct local : details::propertyx<accessor::field<C,T,V>> {
 		cstring name() const noexcept { return id(); }
 	} l;
 	return l;
 }
 
-/**
+/** PropertyScalarAccessor
  * scalar class property via getter/setter wrapped in accessor
  */
 template<class C, details::name id, class X>
-const details::property<C> & P() noexcept {
+inline const details::property<C> & PropertyScalarAccessor() noexcept {
 	static const struct local : details::propertyx<X> {
 		cstring name() const noexcept { return id(); }
 	} l;
@@ -1589,27 +1730,30 @@ const details::property<C> & P() noexcept {
 }
 
 /**
- * string class property
+ * read-only string class property
  */
-template<class C, details::name id, size_t N, char_t (C::*M)[N]>
-const details::property<C> & P() noexcept {
+template<class C, details::name id, cstring C::*M>
+inline const details::property<C> & PropertyConstString() noexcept {
 	static const struct local : details::property<C> {
 		cstring name() const noexcept { return id(); }
-		bool read(C& obj, details::lexer& in) const noexcept {
-			return details::reader<char_t*>::read(obj.*M, N, in);
+		bool read(C&, details::lexer& in) const noexcept {
+			in.error(details::error_t::noobject);
+			return false;
 		}
 		bool write(const C& obj, details::ostream& out) const noexcept {
-			return details::writer<const char_t*>::write(obj.*M, out);
+			return obj.*M != nullptr ?
+				details::writer<cstring>::write(obj.*M, out) :
+				object::null(out);
 		}
 	} l;
 	return l;
 }
 
-/**
+/** PropertyVector
  * vector class property (T[N])
  */
 template<class C, details::name id, typename T, size_t N, T (C::*M)[N]>
-const details::property<C>& P() {
+inline const details::property<C>& PropertyVector() {
 	static const struct local : details::property<C> {
 		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
@@ -1636,10 +1780,63 @@ const details::property<C>& P() {
 }
 
 /**
+ * string class property
+ */
+
+template<class C, details::name id, size_t N, char_t (C::*M)[N]>
+const details::property<C> & PropertyString() noexcept {
+	static const struct local : details::property<C> {
+		cstring name() const noexcept { return id(); }
+		bool read(C& obj, details::lexer& in) const noexcept {
+			return details::reader<char_t*>::read(obj.*M, N, in);
+		}
+		bool write(const C& obj, details::ostream& out) const noexcept {
+			return obj.*M ?
+				details::writer<const char_t*>::write(obj.*M, out) :
+				object::null(out);
+		}
+	} l;
+	return l;
+}
+
+/** PropertyStrings
+ * vector of strings: char [N][K];
+ */
+template<class C, details::name id, size_t N, size_t K, char_t (C::*M)[N][K]>
+inline const details::property<C>& PropertyStrings() {
+	static const struct local : details::property<C> {
+		cstring name() const noexcept { return id(); }
+		bool read(C& obj, details::lexer& in) const noexcept {
+			return details::collection<>::read(*this, obj, in);
+		}
+		bool write(const C& obj, details::ostream& out) const noexcept {
+			/* delegate write to array */
+			return details::array::write(*this, obj, out);
+		}
+		/** read item */
+		inline bool read(C& obj, details::lexer& in, size_t i) const noexcept {
+			return
+				( details::reader<char_t*>::read((obj.*M)[i], K, in) || in.skip(false) )?
+				(i < N-1) : false;
+		}
+		/** write item item */
+		inline bool write(const C& obj, details::ostream& out,
+				size_t i) const noexcept {
+			if( (obj.*M)[i] ) // FIXME this does not look right
+				details::writer<const char_t*>::write((obj.*M)[i], out);
+			else
+				object::null(out);
+			return i < N-1;
+		}
+	} l;
+	return l;
+}
+
+/** PropertyObject
  * nested in C object property of type T with structure S
  */
 template<class C,details::name id,class T,T C::*V,const details::clas<T>& S()>
-const details::property<C> & P() {
+inline const details::property<C> & PropertyObject() {
 	static const struct local : details::property<C> {
 		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
@@ -1652,12 +1849,12 @@ const details::property<C> & P() {
 	return l;
 }
 
-/**
+/** PropertyArrayOfObjects
  * nested in C array of objects of type T with structure S
  */
 template<class C, details::name id, class T,
 	size_t N, T (C::*V)[N], const details::clas<T>& S()>
-const details::property<C> & P() {
+inline const details::property<C> & PropertyArrayOfObjects() {
 	static const struct local : details::property<C> {
 		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
@@ -1681,150 +1878,245 @@ const details::property<C> & P() {
 	return l;
 }
 
-/**
- * JSON object associated with a C++ class
+
+/** PropertyList
+ *  nested in C array of objects of type T with structure S
  */
-template<class C, typename details::property<C>::node ... L>
-const details::clas<C>& O() noexcept {
-	static constexpr typename details::property<C>::node list[] { L ... } ;
+template<class C, details::name id, typename details::property<C>::node ... L>
+inline const details::property<C> & PropertyList() noexcept {
 	static constexpr auto size = sizeof...(L);
-	static const details::clas<C> l(list,size);
+	using node = typename details::property<C>::node;
+	static constexpr node list[size ? size : 1] { L ... } ;
+	static const struct local : details::list<C> {
+		cstring name() const noexcept { return id(); }
+		inline local(const node* list, size_t size) noexcept : list<C>::list(list, size) {}
+	} l(size ? list : nullptr,size);
 	return l;
 }
 
-/**
+/** PropertyExternValue
+ * external/static JSON value, associated with a C object
+ */
+template<class C, details::name id, details::item J>
+inline const details::property<C> & PropertyExternValue() {
+	static const struct local : details::property<C> {
+		cstring name() const noexcept { return id(); }
+		bool read(C&, details::lexer& in) const noexcept {
+			return J().read(in);
+		}
+		bool write(const C&, details::ostream& out) const noexcept {
+			return J().write(out);
+		}
+	} l;
+	return l;
+}
+
+/** ObjectClass
+ * JSON object associated with a C++ class
+ */
+template<class C, typename details::property<C>::node ... L>
+inline const details::clas<C>& ObjectClass() noexcept {
+	static constexpr auto size = sizeof...(L);
+	static constexpr typename details::property<C>::node list[size ? size : 1] { L ... } ;
+	static const details::clas<C> l(size ? list : nullptr,size);
+	return l;
+}
+
+
+/** ObjectJson
+ * A shortcut for defining JSON structure for a class
+ * with all properties being class members
+ *
+ * Usage:
+ *   ObjectJson<MyClass,     bool,         int>::
+ *   PropertyNames<    name::foo,     name::bar>::
+ *   FieldPointers<&MyClass::foo, &MyClass::bar>::json().read(myObj, input);
+ */
+template<class Class, typename ... Type>
+struct ObjectJson {
+	template<details::name ... Name>
+	struct PropertyNames {
+		template<Type Class::* ... Pointer>
+		struct FieldPointers {
+			static const details::clas<Class>& json() noexcept {
+				return ObjectClass<Class,
+					PropertyScalarMember<Class,Name,Type,Pointer>...>();
+			}
+		};
+	};
+};
+
+/** ValueObject
  * JSON object
  */
 template<details::node ... L>
-const details::value& V() noexcept {
+inline const details::value& ValueObject() noexcept {
 	static constexpr details::node list[] { L ... };
 	static constexpr unsigned size = sizeof...(L);
 	static const details::object l(list, size);
 	return l;
 }
 
+template<>
+inline const details::value& ValueObject<>() noexcept {
+	static const details::emptyobject l;
+	return l;
+}
 
-/**
+
+/** ValueArray
  * JSON array (heterogeneous list)
  */
 template<details::item ... L>
-const details::value& V() noexcept {
+inline const details::value& ValueArray() noexcept {
 	static constexpr details::item items[] { L ... };
 	static constexpr auto size = sizeof...(L);
 	static details::array l(items, size);
 	return l;
 }
 
-/**
+template<>
+inline const details::value& ValueArray<>() noexcept {
+	static details::emptyarray l;
+	return l;
+}
+
+/** ValueString
  * JSON string bound to an array char_t[N]
  */
 template<size_t N, char_t (&A)[N]>
-const details::value& V() noexcept {
+inline const details::value& ValueString() noexcept {
 	static const details::string l(A,N);
 	return l;
 }
 
 
-/**
+/** ValueStrings
+ *  vector of strings: char [N][K];
+ */
+template<size_t N, size_t K, char_t (&M)[N][K]>
+inline const details::value& ValueStrings() {
+    static const struct local : details::value {
+        bool read(details::lexer& in) const noexcept {
+        	void_t v;
+            return details::collection<>::read(*this, v, in);
+        }
+        bool write(details::ostream& out) const noexcept {
+            /* delegate write to array */
+            return details::array::write(*this, void_v, out);
+        }
+        /** read item */
+        inline bool read(void_t&, details::lexer& in, size_t i) const noexcept {
+            return
+                ( details::reader<char_t*>::read(M[i], K, in) || in.skip(false) )?
+                (i < N-1) : false;
+        }
+        /** write item item */
+        inline bool write(const void_t&, details::ostream& out, size_t i) const noexcept {
+        	details::writer<const char_t*>::write(M[i], out);
+            return i < N-1;
+        }
+    } l;
+    return l;
+}
+
+/** ValueStringFunction
  * JSON string bound to an array char_t[N] via function F
  */
 template<size_t N, char_t* (*F)() noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueStringFunction() noexcept {
 	static const details::string l(F(),N);
 	return l;
 }
 
-/**
+/** ValueConstStringFunction
  * not parseable string bound to a zero-teminated string via function F
  */
 template<const char_t* (*F)() noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueConstStringFunction() noexcept {
 	static const details::string l(F());
 	return l;
 }
 
-/**
+/** ValueAccessor
  * a single scalar value or a vector of scalars of unspecified length
  * accessed via accessor class X
  */
 template<class X>
-const details::value& V() noexcept {
+inline const details::value& ValueAccessor() noexcept {
 	static const details::values<X> l;
 	return l;
 }
 
-/**
+/** ValueObjectAccessor
  * a object or a vector of object unspecified length
  * accessed via accessor class X and structured with S.
- * @param
  */
 template<class X, const details::clas<typename X::clas>& (*S)() noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueObjectAccessor() noexcept {
 	static const details::objects<X,S> l;
 	return l;
 }
 
-/**
+/** ValuePointer
  * value - plain variable via pointer
  */
 template<typename T, T* P>
-const details::value& V() noexcept {
+inline const details::value& ValuePointer() noexcept {
 	static const details::scalar<accessor::pointer<T,P>> l;
 	return l;
 }
 
-
-/**
+/** ValueReferenceFunction
  * value - plain variable by function returning reference
  */
 template<typename T, T& (*F)() noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueReferenceFunction() noexcept {
 	static const details::scalar<accessor::reference<T,F>> l;
 	return l;
 }
 
-/**
+/** ValuePointerFunction
  * value - plain variable by function returning pointer
  */
 template<typename T, T* (*F)() noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValuePointerFunction() noexcept {
 	static const details::scalar<accessor::function<T,F>> l;
 	return l;
 }
 
-/**
+/** ValueGetterSetter
  * value - plain variable by pair getter/setter functions
  */
 template<typename T, T (*G)() noexcept, void (*S)(T) noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueGetterSetter() noexcept {
 	static const details::scalar<accessor::functions<T,G,S>> l;
 	return l;
 }
 
-
-/**
- * value - a vector of T accessible via function returning pointer to item
+/** ValueVector
+ * value - a vector of T accessible via array reference
  */
 template<typename T, size_t N, T (&A)[N]>
-const details::value& V() noexcept {
+inline const details::value& ValueVector() noexcept {
 	static const details::vector<accessor::array<T,N,A>> l;
 	return l;
 }
 
-/**
+/** ValueArrayFunction
  * value - a vector of T accessible via function returning pointer to item
  */
 template<typename T, T* (*F)(size_t) noexcept>
-const details::value& V() noexcept {
+inline const details::value& ValueArrayFunction() noexcept {
 	static const details::vector<accessor::vector<T,F>> l;
 	return l;
 }
 
-/**
+/** MemberValue
  * JSON member (generic)
  */
 template<details::name id, details::item I>
-const details::member& M() noexcept {
+inline const details::member& MemberValue() noexcept {
 	static const struct local : details::member {
 		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
@@ -1837,11 +2129,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-/**
+/** MemberStringFunction
  * JSON string member
  */
 template<details::name id, size_t N, char_t* (*F)() noexcept>
-const details::member& M() noexcept {
+inline const details::member& MemberStringFunction() noexcept {
 	static const struct local : details::member, details::string {
 		inline local() noexcept : details::string(F(),N) {}
 		cstring name() const noexcept { return id(); }
@@ -1851,11 +2143,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-/**
+/** MemberConstStringFunction
  * not parseable string bound to a zero-teminated string via function F
  */
 template<details::name id, const char_t* (*F)() noexcept>
-const details::member& M() noexcept {
+inline const details::member& MemberConstStringFunction() noexcept {
 	static const struct local : details::member, details::string {
 		inline local() noexcept : details::string(F()) {}
 		cstring name() const noexcept { return id(); }
@@ -1869,12 +2161,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-
-/**
+/** MemberAccessor
  * member - by accessor
  */
 template<details::name id, class X>
-const details::member& M() noexcept {
+inline const details::member& MemberAccessor() noexcept {
 	static const struct local : details::member, details::values<X> {
 		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
@@ -1887,11 +2178,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-/**
+/** MemberReferenceFunction
  * member - plain variable by function returning reference
  */
 template<details::name id, typename T, T& (*F)() noexcept>
-const details::member& M() noexcept {
+inline const details::member& MemberReferenceFunction() noexcept {
 	static const struct local : details::member, details::values<accessor::reference<T,F>> {
 		cstring name() const noexcept { return id(); }
 		bool readval(details::lexer& in) const noexcept {
@@ -1904,11 +2195,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-/**
- * member - plain variable by function returning pointer
+/** MemberPointer
+ * member - plain variable by pointer
  */
 template<details::name id, typename T, T* P>
-const details::member& M() noexcept {
+inline const details::member& MemberPointer() noexcept {
 	static const struct local : details::member,
 		details::scalar<accessor::pointer<T,P>> {
 		cstring name() const noexcept { return id(); }
@@ -1922,12 +2213,11 @@ const details::member& M() noexcept {
 	return l;
 }
 
-
-/**
+/** MemberPointerFunction
  * member - plain variable by function returning pointer
  */
 template<details::name id, typename T, T* (*F)() noexcept>
-const details::member& M() noexcept {
+const details::member& MemberPointerFunction() noexcept {
 	static const struct local : details::member,
 		details::scalar<accessor::function<T,F>> {
 		cstring name() const noexcept { return id(); }
@@ -1940,6 +2230,328 @@ const details::member& M() noexcept {
 	} l;
 	return l;
 }
+
+}
+
+/**
+ * scalar class property
+ */
+template<class C, details::name id, typename T, T C::*V>
+const details::property<C> & P() noexcept {
+	return details::PropertyScalarMember<C,id,T,V>();
+}
+
+/**
+ * scalar class property via getter/setter wrapped in accessor
+ */
+template<class C, details::name id, class X>
+const details::property<C> & P() noexcept {
+	return details::PropertyScalarAccessor<C,id,X>();
+}
+
+/**
+ * string class property
+ */
+template<class C, details::name id, size_t N, char_t (C::*M)[N]>
+const details::property<C> & P() noexcept {
+	return details::PropertyString<C,id,N,M>();
+}
+
+/**
+ * read-only string class property
+ */
+template<class C, details::name id, const char_t* C::*M>
+const details::property<C> & P() noexcept {
+	return details::PropertyConstString<C,id,M>();
+}
+
+/**
+ * vector class property (T[N])
+ */
+template<class C, details::name id, typename T, size_t N, T (C::*M)[N]>
+const details::property<C>& P() {
+	return details::PropertyVector<C,id,T,N,M>();
+}
+
+/**
+ * vector of strings: char [N][K];
+ */
+template<class C, details::name id, size_t N, size_t K, char_t (C::*M)[N][K]>
+const details::property<C>& P() {
+	return details::PropertyStrings<C,id,N,K,M>();
+}
+
+/**
+ * nested in C object property of type T with structure S
+ */
+template<class C,details::name id,class T,T C::*V,const details::clas<T>& S()>
+const details::property<C> & P() {
+	return details::PropertyObject<C,id,T,V,S>();
+}
+
+/**
+ * nested in C array of objects of type T with structure S
+ */
+template<class C, details::name id, class T,
+	size_t N, T (C::*V)[N], const details::clas<T>& S()>
+const details::property<C> & P() {
+	return details::PropertyArrayOfObjects<C,id,T,N,V,S>();
+}
+
+
+/**
+ *  nested in C array of objects of type T with structure S
+ */
+template<class C, details::name id, typename details::property<C>::node ... L>
+inline const details::property<C> & P() noexcept {
+	return details::PropertyList<C, id, L...>();
+}
+
+/**
+ * external/static JSON value, associated with a C object
+ */
+template<class C,details::name id, details::item J>
+const details::property<C> & P() {
+	return details::PropertyExternValue<C,id,J>();
+}
+
+/**
+ * JSON object associated with a C++ class
+ */
+template<class C, typename details::property<C>::node ... L>
+const details::clas<C>& O() noexcept {
+	return details::ObjectClass<C, L...>();
+}
+
+/**
+ * JSON object
+ */
+template<details::node N, details::node ... L>
+const details::value& V() noexcept {
+	return details::ValueObject<N, L...>();
+}
+
+/**
+ * JSON array (heterogeneous list)
+ */
+template<details::item ... L>
+const details::value& V() noexcept {
+	return details::ValueArray<L...>();
+}
+
+/**
+ * JSON empty array
+ */
+template<>
+inline const details::value& V() noexcept {
+	return details::ValueArray<>();
+}
+
+
+/**
+ * JSON string bound to an array char_t[N]
+ */
+template<size_t N, char_t (&A)[N]>
+const details::value& V() noexcept {
+	return details::ValueString<N,A>();
+}
+
+/**
+ * JSON string bound to an array char_t[N] via function F
+ */
+template<size_t N, char_t* (*F)() noexcept>
+const details::value& V() noexcept {
+	return details::ValueStringFunction<N,F>();
+}
+
+/**
+ * not parseable string bound to a zero-teminated string via function F
+ */
+template<const char_t* (*F)() noexcept>
+const details::value& V() noexcept {
+	return details::ValueConstStringFunction<F>();
+}
+
+/**
+ *  vector of strings: char [N][K];
+ */
+template<size_t N, size_t K, char_t (&M)[N][K]>
+const details::value& V() {
+    return details::ValueStrings<N,K,M>();
+}
+
+/**
+ * a single scalar value or a vector of scalars of unspecified length
+ * accessed via accessor class X
+ */
+template<class X>
+const details::value& V() noexcept {
+	return details::ValueAccessor<X>();
+}
+
+
+/**
+ * a object or a vector of object unspecified length
+ * accessed via accessor class X and structured with S.
+ * @param
+ */
+template<class X, const details::clas<typename X::clas>& (*S)() noexcept>
+const details::value& V() noexcept {
+	return details::ValueObjectAccessor<X,S>();
+}
+
+/**
+ * value - plain variable via pointer
+ */
+template<typename T, T* P>
+const details::value& V() noexcept {
+	return details::ValuePointer<T,P>();
+}
+
+/**
+ * value - plain variable by function returning reference
+ */
+template<typename T, T& (*F)() noexcept>
+const details::value& V() noexcept {
+	return details::ValueReferenceFunction<T,F>();
+}
+
+/**
+ * value - plain variable by function returning pointer
+ */
+template<typename T, T* (*F)() noexcept>
+const details::value& V() noexcept {
+	return details::ValuePointerFunction<T,F>();
+}
+
+/**
+ * value - plain variable by pair getter/setter functions
+ */
+template<typename T, T (*G)() noexcept, void (*S)(T) noexcept>
+const details::value& V() noexcept {
+	return details::ValueGetterSetter<T,G,S>();
+}
+
+/**
+ * value - a vector of T accessible via array reference
+ */
+template<typename T, size_t N, T (&A)[N]>
+const details::value& V() noexcept {
+	return details::ValueVector<T,N,A>();
+}
+
+/**
+ * value - a vector of T accessible via function returning pointer to item
+ */
+template<typename T, T* (*F)(size_t) noexcept>
+const details::value& V() noexcept {
+	return details::ValueArrayFunction<T,F>();
+}
+
+/**
+ * JSON member (generic)
+ */
+template<details::name id, details::item I>
+const details::member& M() noexcept {
+	return details::MemberValue<id,I>();
+}
+
+/**
+ * JSON string member
+ */
+template<details::name id, size_t N, char_t* (*F)() noexcept>
+const details::member& M() noexcept {
+	return details::MemberStringFunction<id,N,F>();
+}
+
+/**
+ * not parseable string bound to a zero-teminated string via function F
+ */
+template<details::name id, const char_t* (*F)() noexcept>
+const details::member& M() noexcept {
+	return details::MemberConstStringFunction<id,F>();
+}
+/**
+ * member - by accessor
+ */
+template<details::name id, class X>
+const details::member& M() noexcept {
+	return details::MemberAccessor<id,X>();
+}
+
+/**
+ * member - plain variable by function returning reference
+ */
+template<details::name id, typename T, T& (*F)() noexcept>
+const details::member& M() noexcept {
+	return details::MemberReferenceFunction<id,T,F>();
+}
+
+/**
+ * member - plain variable by pointer
+ */
+template<details::name id, typename T, T* P>
+const details::member& M() noexcept {
+	return details::MemberPointer<id,T,P>();
+}
+
+/**
+ * member - plain variable by function returning pointer
+ */
+template<details::name id, typename T, T* (*F)() noexcept>
+const details::member& M() noexcept {
+	return details::MemberPointerFunction<id,T,F>();
+}
+
+/**
+ * Writes a JSON value of compatible type:
+ * - numeric
+ * - bool
+ * - const char*
+ * - classes with methods read(lexer&) and write(ostream&)
+ */
+template<typename T>
+inline bool Write(const T& value, details::ostream& out) noexcept {
+	static_assert(std::is_class<T>::value ==
+		detectors::has_write<T,details::ostream&>::value,
+		"Class is missing public: bool write(ostream&) const; method");
+	typedef typename std::remove_const<T>::type T_noconst;
+	typedef typename std::remove_reference<T_noconst>::type V;
+
+	return cojson::details::writer<V>::write(value, out);
+}
+
+/**
+ * Reads from lexer a JSON value of compatible type:
+ * - numeric
+ * - bool
+ * - const char*
+ * - classes with methods read(lexer&) and write(ostream&)
+ */
+template<typename T>
+inline bool Read(T& value, details::lexer& in) noexcept {
+	static_assert(
+		std::is_class<T>::value == detectors::has_read<T,lexer&>::value,
+		"Class is missing public: bool read(lexer&); method");
+	typedef typename std::remove_const<T>::type T_noconst;
+	typedef typename std::remove_reference<T_noconst>::type V;
+
+	return cojson::details::reader<V>::read(value, in);
+}
+
+/**
+ * Reads from lexer a JSON value of compatible type:
+ * - numeric
+ * - bool
+ * - const char*
+ * - classes with methods read(lexer&) and write(ostream&)
+ */
+template<typename T>
+inline bool Read(T& value, details::istream& in) noexcept {
+	lexer lex(in);
+	return Read(value, lex);
+}
+
 
 namespace details {
 /****************************************************************************
@@ -2030,6 +2642,50 @@ public:
 private:
 	size_t msize;
 };
+}
 
+namespace wrappers {
+using details::buffer;
+
+/**
+ * Input/output streams bound to a memory region
+ */
+class memstream : public details::iostream {
+public:
+//	template<unsigned N>
+//	inline memstream(char_t (&buff)[N]) : memstream(buff, N) {}
+	template<unsigned N>
+	inline memstream(volatile char_t (&buff)[N]) : memstream(buff, N) {}
+	inline memstream(volatile char_t* buff, size_t len) noexcept : putpos(0), getpos(0), size(len), buffer(buff) { }
+	bool put(char_t val) noexcept {
+		using namespace details;
+		if( putpos >= size ) {
+			ostream::error(error_t::eof);
+			return false;
+		}
+		buffer[putpos++] = val;
+		return true;
+	}
+	bool get(char_t& val) noexcept {
+		using namespace details;
+		if( getpos >= size || (val = buffer[getpos]) == 0 ) {
+			val = iostate::eos_c;
+			istream::error(error_t::eof);
+			return false;
+		}
+		++getpos;
+		return true;
+	}
+	inline void reset() noexcept { putpos = 0; getpos = 0; }
+	inline void set(char_t* buff, size_t len) noexcept { buffer = buff; size = len; reset(); }
+	template<unsigned N>
+	inline void set(char_t (&buff)[N]) noexcept { set(buff, N); }
+protected:
+	//bool _puts(const char_t* s) noexcept; //TODO decide if is needed as strncpy();
+private:
+	size_t 	putpos;
+	size_t	getpos;
+	size_t	size;
+	volatile char_t* buffer;
+};
 }} /* namespace cojson */
-#endif /* COJSON_HPP_ */

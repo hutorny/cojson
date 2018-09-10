@@ -19,9 +19,9 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "test.hpp"
-#include "host-env.hpp"
 #include <uchar.h>
+#include "host-env.hpp"
+#include "test.hpp"
 
 #define WNAME(s) static inline constexpr const char_t* s() noexcept {return u"" #s;}
 
@@ -33,12 +33,20 @@ WNAME(s)
 
 
 namespace cojson {
+namespace details {
+template<>
+bool ostream::puts<const char*>(const char* v) noexcept {
+	while(*v) if(! put(*v++) ) return false;
+	return true;
+}
+}
+
 namespace test {
 template<>
 bool HostEnvironment::put<char16_t>(char_t chr, FILE* out) const noexcept {
 	/* combination of char16_t char_t used to catch misconfiguration for
 	 * this test															 */
-	char mb[MB_CUR_MAX];
+	char mb[8 /*MB_CUR_MAX */]; // MB_CUR_MAX is not a constant anymore
 	mbstate_t ps {0, 0};
 	int n = c16rtomb(mb, chr, &ps);
 	msg(verbosity::debug,"c16rtomb -> %d '%s'", n, mb);

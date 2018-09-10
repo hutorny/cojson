@@ -7,6 +7,7 @@ Tests overview
 	003. writing pod object, encapsulated object, dynamic object
 	004. writing extern C objects
 	005. writing values with only setter or only getter  
+	006. writing POD defined with ObjectJson<>...
 	030. reading plain values
 	031. reading strings
 	032. reading homogeneous arrays
@@ -48,8 +49,8 @@ Folder structure
 Building tests for Arduino Mega 
 1. Download and install Arduino Studio https://www.arduino.cc/en/Main/Software
 2. Link missing c++ includes
- # ln -s /usr/include/c++/4.9/limits ../include/
- # ln -s /usr/include/c++/4.9/type_traits ../include/
+ # ln -s /usr/include/c++/6/limits ../include/
+ # ln -s /usr/include/c++/6/type_traits ../include/
 3. Run make, using actual path to Arduino Studio
  # make mega ARDUINO-DIR=/opt/arduino/hardware/arduino/avr/cores/arduino/     \
    VARIANT-DIR=/opt/arduino/hardware/arduino/avr/variants/mega

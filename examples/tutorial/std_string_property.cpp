@@ -1,20 +1,20 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015, 2017 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * std_string_property.cpp - example for using cojson with std strings
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License v2
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */

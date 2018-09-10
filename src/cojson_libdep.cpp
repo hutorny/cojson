@@ -1,20 +1,22 @@
 /*
- * Copyright (C) 2015 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015-2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * cojson_libdep.cpp - methods' implementations with soft dependencies on libs
  *
  * This file is part of COJSON Library. http://hutorny.in.ua/projects/cojson
+ * This file is part of µcuREST Library. http://hutorny.in.ua/projects/micurest
+ *
  *
  * The COJSON Library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License v2
+ * modify it under the terms of the GNU General Public License v2
  * as published by the Free Software Foundation;
  *
  * The COJSON Library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU Lesser General Public License for more details.
+ * See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
+ * You should have received a copy of the GNU General Public License v2
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
@@ -46,45 +48,6 @@ struct string_helper<T,true> {
 		return strcmp(a, b) == 0;
 	}
 };
-
-template<>
-bool match<const wchar_t*,   const wchar_t*>(
-		   const wchar_t* a, const wchar_t* b) noexcept {
-	return string_helper<const wchar_t*>::match(a,b);
-}
-
-template<>
-bool match<const char16_t*,   const char16_t*>(
-		   const char16_t* a, const char16_t* b) noexcept {
-	return string_helper<const char16_t*>::match(a,b);
-}
-
-template<>
-bool match<const char32_t*,   const char32_t*>(
-		   const char32_t* a, const char32_t* b) noexcept {
-	return string_helper<const char32_t*>::match(a,b);
-}
-
-template<>
-bool match<const char*, const char*>(const char* a, const char* b) noexcept {
-	return string_helper<const char*>::match(a,b);
-}
-
-template<>
-bool match<const wchar_t*, wchar_t*>(const wchar_t * a, wchar_t* b) noexcept {
-	return string_helper<const wchar_t*>::match(a,b);
-}
-
-template<>
-bool match<const char16_t*, char16_t*>(const char16_t * a, char16_t* b) noexcept {
-	return string_helper<const char16_t*>::match(a,b);
-}
-
-template<>
-bool match<const char32_t*, char32_t*>(const char32_t * a, char32_t* b) noexcept {
-	return string_helper<const char32_t*>::match(a,b);
-}
-
 
 template<typename C, typename T,
 	bool hasswprintf = has_swprintf<T,C>::value,
@@ -208,12 +171,13 @@ inline bool write_double_impl<config::write_double_impl_is::internal>(
 template<>
 inline bool write_double_impl<config::write_double_impl_is::with_sprintf>(
 		const double& val, ostream& out) noexcept {
-	temporary tmp;
-	if( ! any<char_t>::gfmt(tmp.buffer, tmp.size, val) ) {
+	temporary_s<char, config::sprintf_buffer_size,
+					  config::sprintf_buffer_static> tmp;
+	if( ! any<char>::gfmt(tmp, tmp.size, val) ) {
 		out.error(error_t::overrun);
 		return false;
 	}
-	return out.puts(tmp.buffer);
+	return out.puts((const char*)tmp);
 }
 
 bool writer<double>::write(const double& val, ostream& out) noexcept {
@@ -221,5 +185,48 @@ bool writer<double>::write(const double& val, ostream& out) noexcept {
 }
 
 }}
+
+namespace elemental {
+using cojson::details::string_helper;
+
+template<>
+bool match<const wchar_t*,   const wchar_t*>(
+		   const wchar_t* a, const wchar_t* b) noexcept {
+	return string_helper<const wchar_t*>::match(a,b);
+}
+
+template<>
+bool match<const char16_t*,   const char16_t*>(
+		   const char16_t* a, const char16_t* b) noexcept {
+	return string_helper<const char16_t*>::match(a,b);
+}
+
+template<>
+bool match<const char32_t*,   const char32_t*>(
+		   const char32_t* a, const char32_t* b) noexcept {
+	return string_helper<const char32_t*>::match(a,b);
+}
+
+template<>
+bool match<const char*, const char*>(const char* a, const char* b) noexcept {
+	return string_helper<const char*>::match(a,b);
+}
+
+template<>
+bool match<const wchar_t*, wchar_t*>(const wchar_t * a, wchar_t* b) noexcept {
+	return string_helper<const wchar_t*>::match(a,b);
+}
+
+template<>
+bool match<const char16_t*, char16_t*>(const char16_t * a, char16_t* b) noexcept {
+	return string_helper<const char16_t*>::match(a,b);
+}
+
+template<>
+bool match<const char32_t*, char32_t*>(const char32_t * a, char32_t* b) noexcept {
+	return string_helper<const char32_t*>::match(a,b);
+}
+}
+
 
 

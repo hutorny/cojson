@@ -51,12 +51,14 @@ table.table { border-collapse: collapse; border-spacing: 0; padding:0px; margin-
 				<h1 class="entry-title" style="text-align:center;font-stretch: expanded;">cojson tutorial</h1>
 <div class="entry-content">
 <h3>1. Getting Started</h3>
-<p>To start using <span class="term">cojson</span> parser/generator you need to define the structure 
+<p>For a quick start the easiest way is using <a href="https://hutorny.in.ua/codegen/cojson.html" target="_blank"><span class="term">codegen</span></a>.
+Paste you <span class="term">JSON</span> into the left editor, hit button <span class="term">Run</span> and collect results in the right editor.
+Adjust options if necessary and build with your application.</p>
+<p>With instructions, given in this tutorial, you may manually craft or adjust auto-generated  structure 
 of your <span class="term">JSON</span> object by mapping its elements to <span class="term">cojson</span> elements, 
 bind them to members of your C++ class (see <a href="#section-2">Section 2</a>),
 implement the interfaces for the data streams you have, and build <span class="term">cojson</span> library 
 with your application (see <a href="#section-3">Section 3</a>).</p>
-<span id="more-617"></span>
 <p>The library provides implementation for parsing/serialization of basic types. However, your application is 
 not limited to those types only. You can add a reader/writer for your own type and use it with 
 <span class="term">cojson</span> (see <a href="#section-5.1">Sections 5.1, 5.2</a>). Also, if signatures of getters/setters 
@@ -70,10 +72,10 @@ Parameters of these templates define <span class="term">JSON</span> member name,
 and the storage access method - a member pointer or getter/setter methods. 
 There are four groups of template functions each having its specific purpose and name:</p>
 <table class="table functions">
-	<tr><th style="width:6em">V&lt;...&gt;()</th><td>Defines a generic value</td></tr>
-	<tr><th>M&lt;...&gt;()</th><td>Defines a member</td></tr>
-	<tr><th>O&lt;...&gt;()</th><td>Defines an object mapped to C++ class</td></tr>
-	<tr><th>P&lt;...&gt;()</th><td>Defines an object property</td></tr>
+	<tr><th style="width:6em">V&lt;...&gt;()</th><td>Value...&lt;...&gt;()</td><td>Defines a generic value</td></tr>
+	<tr><th>M&lt;...&gt;()</th><td>Member...&lt;...&gt;()</td><td>Defines a member</td></tr>
+	<tr><th>O&lt;...&gt;()</th><td>Object...&lt;...&gt;()</td><td>Defines an object mapped to C++ class</td></tr>
+	<tr><th>P&lt;...&gt;()</th><td>Property...&lt;...&gt;()</td><td>Defines an object property</td></tr>
 </table>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
 short val;
@@ -82,7 +84,11 @@ V&lt;M&lt;name,short,&amp;val&gt;&gt;().read(in);
 struct Pdo { int prop; };
 O&lt;Pdo, P&lt;Pdo, short, &amp;Pdo::prop&gt;&gt;().write(out);
 </pre>
-
+<p>These shorn-name functions are just aliases for a wide set of long name functions. If you experience difficulties
+supplying parameters to a short function, use appropriate long function. You may toggle <span class="term">Compact</span>  
+variant in <a href="https://hutorny.in.ua/codegen/cojson.html" target="_blank"><span class="term">codegen</span></a>'s
+options to learn how.   
+</p>
 <h4 id="section-2.1">2.1. Values</h4>
 <p>A value is defined with template <span class="term">V</span>. 
 Please refer to <a href="#appendix-I">Appendix I</a> for a comprehensive description of all available variants</p>
@@ -202,9 +208,8 @@ However, this behavior may be altered with a library-wide configuration constant
 <h5 id="section-2.2.5">2.2.5. Zero Objects</h5>
 <p>As per <a href="#RFC7159">RFC7159</a>, a <span class="term">JSON</span> object consist 
 of zero or more name/value pairs (or members).
-<span class="term">cojson</span> does not allow defining zero-member objects. However,
-as it was mentioned above, an empty <span class="term">JSON</span> object 
-(<span class="code">{}</span>) is a valid input.</p>
+<span class="term">cojson</span> allow defining zero-member objects. However, due to ambiguity with empty array,
+only long name template function allow this option (e.g. <span class="code">cojson::details::ValueObject&lt;&gt;</span>)</p>
 	
 <h4 id="section-2.3">2.3. Arrays</h4>
 <p><span class="term">cojson</span> is designed to work with a predefined structure and this design
@@ -331,7 +336,8 @@ V&lt;info&gt;().write(out);
 <h4 id="section-2.6">2.6. Reading/Writing</h4>
 <p>To read a <span class="term">JSON</span> text you need to pass it through 
 <span class="code">istream</span> interface and <span class="code">lexer</span> instance.
-For writing you need an <span class="code">ostream</span> interface. 
+<span class="code">cojson::wrappers</span> namespace contains implementation of some wrappers.</p> 
+<p>For writing you need an <span class="code">ostream</span> interface. 
 Please refer to <a href="#section-3">Section-3</a> for more details.</p>
 <p>When read/write operation is complete, application, may examine stream's 
 <span class="code">error()</span> flags to identify possible errors.</p>
@@ -392,7 +398,9 @@ int main(int, char**) {
 </pre>	
 <h3 id="section-3">3. Implementing Stream Interfaces</h3>
 <p><span class="term">cojson</span> provides  implementation of I/O stream interfaces for
-character buffer only. Luckily, these interfaces need just one method each to implement.</p>
+character buffers and wrappers for <span class="code">std::istream</span> and 
+<span class="code">std::ostream</span> (defined in <span class="code">cojson_stdlib.hpp</span>). 
+<br/>Luckily, these interfaces need just one method each to implement.</p>
 	
 <h4 id="section-3.1">3.1. <span class="term">istream</span> Interface</h4>
 <pre class="brush: cpp; title: ; notranslate" title="">	
@@ -415,21 +423,21 @@ struct my_ostream : ostream {
     }
 };
 </pre>
+<a id="build"></a>
 <h3 id="section-4">4. Building</h3>
 <p>To build application with <span class="term">cojson</span>, add its source 
 directory <span class="code">cojson/src</span> to the include path, add the following source files in your project:</p>
 <ul>
 <li>cojson/src/cojson.cpp</li>
 <li>cojson/src/cojson_libdep.cpp</li>
-<li>cojson/src/chartypetable.cpp</li>
+<li>cojson/src/platforms/shared/chartypetable.cpp</li>
 </ul>
-<p>With avr-g++ instead of chartypetable.cpp you may use chartypetable_progmem.cpp.
-It will save you 256 bytes of RAM.</p>
+<p>With avr-g++ you should use all files from <span class="code">cojson/src/platforms/avr/</span>directory.</p>
 <p>On some platform you may get error about missing <span class="code">type_traits</span> and 
 <span class="code">limits</span> files. These files are part of STD C++ library. If your 
 compiler does not find them, it means STD C++ lib is not available on your platform. 
 These files are needed for compilation only and do not introduce any run-time artifact.
-You may use this file from the STD C++ lib on your build machine.</p>
+You may use this file from the STD C++ lib on your build machine, provided both gcc versions matches in major and minor numbers</p>
 <pre class="brush: plain; title: ; notranslate" title="">
 $ cd cojson/include
 $ ln -s /usr/include/c++/4.9/limits .
@@ -443,7 +451,7 @@ you may safely stub those symbols with no implementation.</p>
 <p><span class="code">__cxa_*</span> symbols are part of libc++ abi specification.
 Most critical of possibly missing symbols are <span class="code">__cxa_guard_acquire</span>
 and <span class="code">__cxa_guard_release</span>. You may find a simple implementation 
-for them in <span class="code">test/tools/avrcppfix.cpp</span> or use any other
+for them in <span class="code">cojson/src/platforms/avr/avrcppfix.cpp</span> or use any other
 suitable implementation.</p>
 <p>On some platforms replacing <span class="code">__cxa_pure_virtual</span> with empty implementation saves sufficient 
 amount of program memory. Perhaps this fact is caused by presence of comprehensive diagnostic 
@@ -552,11 +560,11 @@ struct Do {
 };</pre>
 
 <h4 id="section-5.4">5.4. Configuring <span class="term">cojson</span></h4>
-<p><span class="term">cojson</span> is configured with a set of <span class="code">constexpr</span>
-values grouped in the <span class="code">config</span> structure and externalized into an includeable
-file <span class="code">cojson.config</span>. You may adjust that file or create your own 
-<span class="code">cojson.config</span> file in another location, located on the include path
-earlier than the original <span class="code">cojson.config</span>.</p>
+<p><span class="term">cojson</span> is configured with <a href="http://hutorny.in.ua/research/cascaded-configuration-sets-for-c1y">Cascaded Configuration Sets</a> technics.</p>
+<p>For the simplest case, place an empty <span class="code">configuration.h</span> located on the include path
+earlier than the original <span class="code">src/configuration.h</span>. 
+If necessary, make a copy of <span class="code">src/configuration.h</span>, uncomment definitions there and sjudt values as needed 
+</p>
 <table class="table">
 <tr><th>Symbol</th><th>Values</th><th>When specified...</th></tr>
 <tr><td rowspan="3">overflow</td><td>saturate</td><td>numbers are saturated on overflow</td></tr>

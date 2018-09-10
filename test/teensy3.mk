@@ -39,6 +39,7 @@ MAKEFLAGS += --no-builtin-rules
 -include $(BASE-DIR)/teensy3.vars
 export PATH
 
+
 CXX-DEFS := 																\
   ARDUINO=164																\
   F_CPU=72000000UL															\
@@ -164,12 +165,10 @@ TESTS-BASIC := $(wildcard $(addprefix $(BASE-DIR)/suites/basic/, *.c *.cpp))
 TESTS-BENCH := $(wildcard $(addprefix $(BASE-DIR)/suites/bench/, *.c *.cpp))
 TESTS-HOST  := $(wildcard $(addprefix $(BASE-DIR)/suites/host/,  *.c *.cpp))
 TESTS-REST  := $(wildcard $(addprefix $(BASE-DIR)/suites/http/,  *.c *.cpp))
-TESTS-ALL   := $(notdir $(TESTS-BASIC) $(TESTS-BENCH))
+TESTS-ALL   := $(sort $(notdir $(TESTS-BASIC) $(TESTS-BENCH)))
 
 teensy3-OBJS := $(patsubst %.c,%.o,$(TESTS-ALL:.cpp=.o))
 teensy3a-OBJS := $(patsubst %.c,%.o,$(TESTS-HOST:.cpp=.o))
-teensy3r-OBJS := $(patsubst %.c,%.o,$(TESTS-REST:.cpp=.o))					\
-  micurest.o																\
 
 METRIC-SRCS := $(notdir $(wildcard $(BASE-DIR)/suites/metrics/*.cpp))
 METRICS     := $(METRIC-SRCS:.cpp=.size)

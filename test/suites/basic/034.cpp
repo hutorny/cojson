@@ -104,8 +104,8 @@ Test034 Test034::tests[] = {
 	RUN("parsing plain values: unsigned short with overflow", {
 		return plain<unsigned short>::run(env, CSTR("65536"),
 					_<unsigned short>(65535,65535,0));						}),
-	RUN("parsing plain values: positive long with overflow", {
-		return plain<long>::run(env, CSTR("2147483649"),
+	RUN("parsing plain values: positive int32_t with overflow", {
+		return plain<int32_t>::run(env, CSTR("2147483649"),
 			_(2147483647L, 2147483647L, -2147483647L));						}),
 	RUN("parsing plain values: long long", {
 		return plain<long long>::run(env, CSTR("9223372036854775810"),
