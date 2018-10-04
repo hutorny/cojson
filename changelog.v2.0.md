@@ -11,7 +11,7 @@
 
 ### Minor changes
 `ADD:` support for null instead of a string
-<br>`ADD:` iostream wrapper for a a memory buffer `cojson::wrapper::memstream 
+<br>`ADD:` iostream wrapper for a a memory buffer `cojson::wrapper::memstream` 
 <br>`ADD:` empty objects/arrays to ignore pieces in the input
 <br>`ADD:` handling of escaped slash
 <br>`ADD:` cojson::Read/Write template functions
