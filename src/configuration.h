@@ -1,3 +1,4 @@
+#pragma once
 #pragma message "Default configuration.h used, make your own instead"
 
 /* Default application configuration may use blank configuration.h file
@@ -11,7 +12,6 @@
  *
  * /
 
-#pragma once
 #include <cojson.ccs>
 
 namespace configuration {

@@ -1576,18 +1576,13 @@ CojsonGenerator.Content = {
 	},
 	test : `
 	using cojson::details::error_t;
-    if( +input.lexer::error() ) {
-    	std::cerr << "Lexer errors: " << std::hex << (int)+input.lexer::error() << std::endl;
+    if( +input.error() ) {
+    	std::cerr << "Lexer errors: " << std::hex << (int)+input.error() << std::endl;
     	return 1;
-    }
-    if( input.iostate::error() != error_t::noerror &&
-    	input.iostate::error() != error_t::eof) {
-        std::cerr << "Input errors: " << std::hex << (int)+input.iostate::error() << std::endl;
-        return 2;
     }
     if( +output.error() ) {
     	std::cerr << "Output errors: " << std::hex << (int)+output.error() << std::endl;
-    	return 3;
+    	return 2;
     }
 	`,
 	message : {

@@ -24,43 +24,13 @@
 
 namespace cojson { namespace test {
 template<class C, typename T, T (C::*G)() const noexcept>
-struct methods1 {
-	typedef C clas;
-	typedef T type;
-	static constexpr bool canget = true;
-	static constexpr bool canset = false;
-	static constexpr bool canlref   = false;
-	static constexpr bool canrref   = false;
-	static constexpr bool is_vector = false;
-	static inline constexpr bool is() noexcept { return true; }
-	static inline constexpr bool has() noexcept { return true; }
-	static inline T get(const C& o) noexcept { return (o.*G)(); }
-	static T& lref(C&) noexcept;// not possible
-	static const T& rref(const C&) noexcept;// not possible
-	static void set(C&, T) noexcept;
-	static inline void init(T&) noexcept { }
-	static inline constexpr bool null() noexcept { return false; }
+struct methods1 : accessor::methods<C,T,G, nullptr> {
 private:
 	methods1();
 };
 
 template<class C, typename T, void (C::*S)(T) noexcept>
-struct methods0 {
-	typedef C clas;
-	typedef T type;
-	static constexpr bool canget = false;
-	static constexpr bool canset = true;
-	static constexpr bool canlref   = false;
-	static constexpr bool canrref   = false;
-	static constexpr bool is_vector = false;
-	static inline constexpr bool is() noexcept { return false; }
-	static inline constexpr bool has() noexcept { return false; }
-	static T& lref(C&) noexcept;// not possible
-	static const T& rref(const C&) noexcept;// not possible
-	static T get(const C&) noexcept;
-	static inline void set(C& o, const T& v) noexcept { (o.*S)(v); }
-	static inline void init(T&) noexcept { }
-	static inline constexpr bool null() noexcept { return false; }
+struct methods0 : accessor::methods<C,T,nullptr,S> {
 private:
 	methods0();
 };
@@ -70,22 +40,7 @@ private:
  * Accessor for a (static) variable via a pair of functions
  */
 template<typename T, T (*G)() noexcept>
-struct functions1 {
-	typedef void clas;
-	typedef T type;
-	static constexpr bool canget = true;
-	static constexpr bool canset = false;
-	static constexpr bool canlref   = false;
-	static constexpr bool canrref   = false;
-	static constexpr bool is_vector = false;
-	static inline constexpr bool has() noexcept { return canget; }
-	static inline constexpr bool is() noexcept { return canset; }
-	static T& lref() noexcept;// not possible
-	static const T& rref() noexcept;// not possible
-	static inline T get() noexcept { return G(); }
-	static inline void set(const T&) noexcept {}
-	static inline void init(T&) noexcept { }
-	static inline constexpr bool null() noexcept { return false; }
+struct functions1 : accessor::functions<T,G, nullptr>  {
 private:
 	functions1();
 };
@@ -94,22 +49,7 @@ private:
  * Accessor for a (static) variable via a pair of functions
  */
 template<typename T, void (*S)(T) noexcept>
-struct functions0 {
-	typedef void clas;
-	typedef T type;
-	static constexpr bool canget = false;
-	static constexpr bool canset = true;
-	static constexpr bool canlref   = false;
-	static constexpr bool canrref   = false;
-	static constexpr bool is_vector = false;
-	static inline constexpr bool has() noexcept { return canget; }
-	static inline constexpr bool is() noexcept { return canset; }
-	static T get() noexcept;
-	static T& lref() noexcept;// not possible
-	static const T& rref() noexcept;// not possible
-	static inline void set(const T& v) noexcept { S(v); }
-	static inline void init(T&) noexcept { }
-	static inline constexpr bool null() noexcept { return false; }
+struct functions0 : accessor::functions<T, nullptr, S>  {
 private:
 	functions0();
 };
@@ -211,17 +151,17 @@ struct integer_limits : integer_limits_names<cstring> {
 	static T _max;
 	static T _pot;
 
-	static inline T& minr() { return _min; }
-	static inline T* minp() { return &_min; }
-	static inline T  ming() { return _min; }
+	static inline T& minr() noexcept { return _min; }
+	static inline T* minp() noexcept { return &_min; }
+	static inline T  ming() noexcept { return _min; }
 
-	static inline T& maxr() { return _max; }
-	static inline T* maxp() { return &_max; }
-	static inline T  maxg() { return _max; }
+	static inline T& maxr() noexcept { return _max; }
+	static inline T* maxp() noexcept { return &_max; }
+	static inline T  maxg() noexcept { return _max; }
 
-	static inline T& potr() { return _pot; }
-	static inline T* potp() { return &_pot; }
-	static inline T  potg() { return _pot; }
+	static inline T& potr() noexcept { return _pot; }
+	static inline T* potp() noexcept { return &_pot; }
+	static inline T  potg() noexcept { return _pot; }
 };
 
 template<typename T>

@@ -10,13 +10,14 @@
     "COJSON"
   ],
   "author": {
-    "name" : "Eugene Hutorny",
+    "name": "Eugene Hutorny",
     "email": "eugene@hutorny.in.ua"
-   }, 
+  },
   "license": "GPL-2.0-only",
   "readmeFilename": "README.md",
   "dependencies": {
-    "command-line-args" : "^5.0.0",
-    "command-line-usage" : "^5.0.0"
+    "command-line-args": "^5.0.0",
+    "command-line-usage": "^5.0.0",
+    "json-diff": "^0.5.3"
   }
 }

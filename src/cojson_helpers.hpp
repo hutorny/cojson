@@ -108,6 +108,15 @@ static auto test_write(long) -> std::false_type;
 template<class C, typename T>
 struct has_write : decltype(test_write<C,T>(0)){};
 
+template<class C>
+static auto test_json(int) -> sfinae_true<decltype(C::json())>;
+template<class C>
+static auto test_json(long) -> sfinae_true<decltype(std::declval<C&>().json())>;
+template<class C>
+static auto test_json(long long) -> std::false_type;
+template<class C>
+struct has_json : decltype(test_json<C>(0)){};
+
 }
 namespace details {
 /******************************************************************************/

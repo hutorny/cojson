@@ -3,7 +3,8 @@
  code generation.
  
  Please visit [`changelog.v2.0.md`](https://github.com/hutorny/cojson/blob/master/changelog.v2.0.md)
- to read about changes introduced in *v2.0* 
+ and [`changelog.v2.1.md`](https://github.com/hutorny/cojson/blob/master/changelog.v2.1.md)
+ to read about changes introduced in *v2* 
 
 ### COJSON Introduction
 
@@ -25,15 +26,17 @@ character, as well as with standard wide character types:
 
 It is also transparent for `UTF8` and properly handles `BOM` sequence.
 
-`cojson` works against a user-defined structure which specifies hierarchy, 
-data types, and data storage access methods. Thus, when parsing is complete, 
+`cojson` works against a user-defined structure which specifies data model - 
+hierarchy, data types, and data storage access methods. Thus, when parsing is complete, 
 the data already delivered to the application and no further processing needed.
 
 The same structure definition is also used for writing `JSON`.
 The `JSON` structure is defined with a set of templetized functions. 
 
-Please visit project's [`home page`](http://hutorny.in.ua/projects/cojson) 
-and [`tutorial`](http://hutorny.in.ua/projects/cojson-tutorial) for more details
+Please visit project's [`home page`](http://hutorny.in.ua/projects/cojson),
+[`tutorial`](http://hutorny.in.ua/projects/cojson-tutorial) for more details
+and [`tutorial for C++17`](http://hutorny.in.ua/projects/cojson/cojson-tutorial-for-c17)
+for more details
 
 ### Code generation
 
@@ -59,7 +62,8 @@ directory in this repository.
 * **Debian** `x64`, `g++-6.3.0`
 * **Arduino Mega** `ATmega2560`, `avr-g++-4.9.2`
 * **Arduino Mega** `ATmega2560`, `avr-g++-5.4.0`
-* **Teensy 3.1** `ARM Cortex-M4` `arm-none-eabi-g++-4.8.4`
+* **Teensy 3.1** `ARM Cortex-M4` `arm-none-eabi-g++-4.9.3`
+* **Teensy 3.1** `ARM Cortex-M4` `arm-none-eabi-g++-5.4.1`
 * **Carambola2** `Atheros AR9331` `mips-openwrt-linux-g++-4.8.3`
 * **MSP430FR6989** `MSP430FR6989` `msp430-elf-g++-4.9.1`
 * **NodeMCU V3** `ESP8266` `xtensa-lx106-elf-g++-4.8.5`

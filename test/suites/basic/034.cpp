@@ -19,8 +19,9 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "test.hpp"
 #include <math.h>
+#include "test.hpp"
+
 
 template<typename T>
 inline constexpr T _(T a, T b, T c) noexcept {

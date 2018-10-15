@@ -74,6 +74,7 @@ struct pointer {
 	}
 	static inline void init(T&) noexcept { }
 private:
+	static_assert(!elemental::is_null<decltype(P),P>(P),"nullptr is not allowed");
 	pointer();
 };
 
@@ -104,6 +105,7 @@ struct reference {
 	}
 	static inline void init(T&) noexcept { }
 private:
+	static_assert(!elemental::is_null<decltype(G),G>(G),"nullptr is not allowed");
 	reference();
 };
 
@@ -133,6 +135,7 @@ struct function {
 	}
 	static inline void init(T&) noexcept { }
 private:
+	static_assert(!elemental::is_null<decltype(G),G>(G),"nullptr is not allowed");
 	function();
 };
 
@@ -153,6 +156,8 @@ struct field {
 	static constexpr bool is_vector = false;
 	static inline constexpr bool has() noexcept { return true; }
 	static inline constexpr bool is() noexcept { return true; }
+	static inline constexpr bool has(const C&) noexcept { return true; }
+	static inline constexpr bool is(C&) noexcept { return true; }
 	static inline void init(T&) noexcept { }
 	static inline T get(const C& o) noexcept { return o.*V; }
 	static inline T& lref(C& o) noexcept { return o.*V; }
@@ -161,8 +166,8 @@ struct field {
 	static inline constexpr bool null(C&) noexcept {
 		return not config::null_is_error;
 	}
-
 private:
+	static_assert(!elemental::is_null<decltype(V),V>(V),"nullptr is not allowed");
 	field();
 };
 
@@ -174,20 +179,22 @@ template<class C, typename T, T (C::*G)() const noexcept,
 struct methods {
 	typedef C clas;
 	typedef T type;
-	static constexpr bool canget = true;
-	static constexpr bool canset = true;
+	static constexpr bool canget = not elemental::is_null<decltype(G),G>(G);
+	static constexpr bool canset = not elemental::is_null<decltype(S),S>(S);
 	static constexpr bool canlref= false;
 	static constexpr bool canrref= false;
 	static constexpr bool is_vector = false;
-	static inline constexpr bool has() noexcept { return true; }
-	static inline constexpr bool is() noexcept { return true; }
+	static inline constexpr bool has() noexcept { return canget; }
+	static inline constexpr bool is() noexcept { return canset; }
+	static inline constexpr bool has(const C&) noexcept { return canget; }
+	static inline constexpr bool is(C&) noexcept { return canset; }
 	static inline T get(const C& o) noexcept { return (o.*G)(); }
 	static T& lref(const C& o) noexcept; 		/* not possible */
 	static const T& rref(const C&) noexcept;	/* not possible */
 	static inline void set(C& o, const T& v) noexcept { (o.*S)(v); }
 	static inline void init(T&) noexcept { }
 	static inline constexpr bool null(C&) noexcept {
-		return not config::null_is_error;
+		return not is() or not config::null_is_error;
 	}
 private:
 	methods();
@@ -217,6 +224,7 @@ struct vector {
 		return not config::null_is_error;
 	}
 private:
+//	static_assert(!elemental::is_null<decltype(*V)>(*V),"nullptr is not allowed");
 	vector();
 };
 
@@ -254,13 +262,13 @@ template<typename T, T (*G)() noexcept, void (*S)(T) noexcept>
 struct functions {
 	typedef void clas;
 	typedef T type;
-	static constexpr bool canget = true;
-	static constexpr bool canset = true;
+	static constexpr bool canget = not elemental::is_null<decltype(G),G>(G);
+	static constexpr bool canset = not elemental::is_null<decltype(S),S>(S);
 	static constexpr bool canlref   = false;
 	static constexpr bool canrref   = false;
 	static constexpr bool is_vector = false;
-	static inline constexpr bool has() noexcept { return true; }
-	static inline constexpr bool is() noexcept { return true; }
+	static inline constexpr bool has() noexcept { return canget; }
+	static inline constexpr bool is() noexcept { return canset; }
 	static inline const T get() noexcept { return G(); }
 	static const T& rref() noexcept;
 	static T& lref() noexcept;
@@ -834,18 +842,25 @@ static inline bool tenfold(T& val, T digit) noexcept {
 
 /******************************************************************************/
 /* JSON readers																  */
-template<typename T, bool isgood=detectors::has_read<T,lexer&>::value>
-struct reader;
+template<typename T,
+	bool isint = std::is_integral<T>::value,
+	bool isgood=detectors::has_read<T,lexer&>::value>
+struct reader {
+	static inline bool read(T& val, lexer& in) noexcept {
+		static_assert(isint||isgood, "No reader available");
+		return false;
+	};
+};
 
 template<typename T>
-struct reader<T,true> {
+struct reader<T, false, true> {
 	static inline bool read(T& val, lexer& in) noexcept {
 		return val.read(in);
 	}
 };
 
 template<typename T>
-struct reader<T,false> {
+struct reader<T, true, false> {
 	/**
 	 * Reads value of given type from the input stream.
 	 * Type of the value is expected to match data type
@@ -1293,6 +1308,7 @@ struct property : noncopyable {
 	virtual cstring name() const noexcept = 0;
 	virtual bool read(C& obj, lexer&) const noexcept = 0;
 	virtual bool write(const C& obj, ostream&) const noexcept = 0;
+	virtual bool has(const C&) const noexcept { return true; }
 	inline bool match(const char_t* aname) const noexcept {
 		return details::match(name(),aname);
 	}
@@ -1313,12 +1329,17 @@ struct clas : noncopyable {
 	}
 	bool write(const C& obj, ostream& out) const noexcept {
 		bool r = (size!=0) || object::dlm(true, out);
+		bool had = false;
 		for(size_t i = 0; i < size && r; ++i) {
 			const property<C>& prop(nodes[i]());
-			r = object::dlm(i==0, out) 			&&
-				member::prolog(prop.name(), out)&&
-				prop.write(obj, out);
+			if( prop.has(obj) ) {
+				r = object::dlm(not had, out) 			&&
+					member::prolog(prop.name(), out)&&
+					prop.write(obj, out);
+				had = true;
+			}
 		}
+		if( ! had ) object::dlm(true,out);
 		return r && object::end(out);
 	}
 	static inline constexpr bool null(C&) noexcept {
@@ -1467,7 +1488,7 @@ struct propertyx : property<typename X::clas> {
 			}
 		}
 		if( X::canset ) {
-			T v;
+			T v {};
 			X::init(v);
 			if( reader<T>::read(v, in) ) {
 				X::set(obj, v);
@@ -1486,6 +1507,9 @@ struct propertyx : property<typename X::clas> {
 			return writer<T>::write(X::get(obj), out);
 		}
 		return value::null(out);
+	}
+	bool has(const C& obj) const noexcept {
+		return X::has(obj);
 	}
 };
 
@@ -1732,7 +1756,7 @@ inline const details::property<C> & PropertyScalarAccessor() noexcept {
 /**
  * read-only string class property
  */
-template<class C, details::name id, cstring C::*M>
+template<class C, details::name id, const cstring C::* M>
 inline const details::property<C> & PropertyConstString() noexcept {
 	static const struct local : details::property<C> {
 		cstring name() const noexcept { return id(); }
@@ -1748,6 +1772,25 @@ inline const details::property<C> & PropertyConstString() noexcept {
 	} l;
 	return l;
 }
+
+/**
+ * read-only string via getter
+ */
+template<class C, details::name id, cstring (C::*M)() const noexcept>
+inline const details::property<C> & PropertyCstring() noexcept {
+	static const struct local : details::property<C> {
+		cstring name() const noexcept { return id(); }
+		bool read(C&, details::lexer& in) const noexcept {
+			in.error(details::error_t::noobject);
+			return false;
+		}
+		bool write(const C& obj, details::ostream& out) const noexcept {
+			return details::writer<cstring>::write((obj.*M)(), out);
+		}
+	} l;
+	return l;
+}
+
 
 /** PropertyVector
  * vector class property (T[N])
@@ -2560,6 +2603,15 @@ namespace details {
 
 /** merger of istream and ostream 											*/
 class iostream : public ostream, public istream {
+public:
+	inline bool good() const noexcept {
+		return  ostream::error() == details::error_t::noerror
+			&&  istream::error() == details::error_t::noerror;
+	}
+	static constexpr auto failbit = details::error_t::failed;
+	inline void setstate(details::error_t err) noexcept {
+		istream::error(err);
+	}
 };
 
 /**
@@ -2644,7 +2696,7 @@ private:
 };
 }
 
-namespace wrappers {
+namespace wrapper {
 using details::buffer;
 
 /**
@@ -2680,6 +2732,8 @@ public:
 	inline void set(char_t* buff, size_t len) noexcept { buffer = buff; size = len; reset(); }
 	template<unsigned N>
 	inline void set(char_t (&buff)[N]) noexcept { set(buff, N); }
+	inline size_t count(bool written=false) const noexcept {
+		return written ? putpos : getpos; }
 protected:
 	//bool _puts(const char_t* s) noexcept; //TODO decide if is needed as strncpy();
 private:
@@ -2688,4 +2742,5 @@ private:
 	size_t	size;
 	volatile char_t* buffer;
 };
-}} /* namespace cojson */
+}
+} /* namespace cojson */

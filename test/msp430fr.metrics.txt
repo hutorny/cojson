@@ -2,14 +2,14 @@
     910	    210	     64	   1184	    4a0	00-base.
    2204	    212	     78	   2494	    9be	01-short-value.
    2376	    212	     80	   2668	    a6c	02-long-value.
-  12534	    212	     84	  12830	   321e	03-double-value.
+  12566	    212	     84	  12862	   323e	03-double-value.
    3510	    212	     78	   3800	    ed8	04-string.
    3402	    212	     78	   3692	    e6c	05-vector-of-shorts.
    4704	    212	    110	   5026	   13a2	06-object-virt.
-   4542	    212	     96	   4850	   12f2	07-object-pdo.
+   4606	    212	     96	   4914	   1332	07-object-pdo.
    2924	    212	     74	   3210	    c8a	08-custom-type.
-  21412	    212	    444	  22068	   5634	09-complex-object.
+  21730	    212	    444	  22386	   5772	09-complex-object.
    2342	    212	     90	   2644	    a54	11-short-values.
    2570	    212	     94	   2876	    b3c	12-long-values.
-  12616	    212	    102	  12930	   3282	13-double-values.
+  12648	    212	    102	  12962	   32a2	13-double-values.
    3584	    212	     92	   3888	    f30	14-strings.

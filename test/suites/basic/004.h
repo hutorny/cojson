@@ -10,10 +10,13 @@
 
 #ifdef __cplusplus
 extern "C" {
+#	define __noexcept noexcept
+#else
+#	define __noexcept
 #endif
 
-extern unsigned * uitem(unsigned n);
-extern const char* strv();
+extern unsigned * uitem(unsigned n) __noexcept;
+extern const char* strv() __noexcept;
 
 struct CPod {
 	char c;
@@ -22,7 +25,7 @@ struct CPod {
 	unsigned long long u;
 	char s[12];
 };
-extern struct CPod * cpod();
+extern struct CPod * cpod() __noexcept;
 extern struct CPod dpod;
 
 #ifdef __cplusplus

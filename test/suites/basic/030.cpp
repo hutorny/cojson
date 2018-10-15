@@ -19,8 +19,8 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
-#include "test.hpp"
 #include <math.h>
+#include "test.hpp"
 
 struct Test030 : Test {
 	static Test030 tests[];

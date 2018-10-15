@@ -241,4 +241,20 @@ inline bool match<progmem<char>,char*>(progmem<char> a, char* b) noexcept {
 	return match<progmem<char>, char const*>(a,b);
 }
 
+#if __GNUC__ >= 7 && !defined(GCC_BUG_52892)
+template<typename T, T>
+inline constexpr bool is_null(T v) noexcept {
+	return v == nullptr;
+}
+#else
+// workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=52892
+template<typename T, T V>
+inline constexpr bool is_null(T) noexcept {
+	return std::is_same<
+		typename std::integral_constant<T,V>::type,
+		typename std::integral_constant<T,nullptr>::type
+		>::value;
+}
+#endif
+
 }

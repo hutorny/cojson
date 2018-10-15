@@ -48,6 +48,7 @@ CXX-DEFS := 																\
   USB_SERIAL																\
   LAYOUT_US_ENGLISH															\
   COJSON_SUITE_SIZE=200														\
+  GCC_BUG_52892
 
 
 CPPFLAGS += 																\
@@ -68,8 +69,15 @@ CPPFLAGS += 																\
   -ffreestanding															\
   -fno-rtti																	\
   -fno-use-cxa-atexit														\
+  -Wno-noexcept-type														\
+  -Wno-c++14-compat															\
 
-
+GNUC_VERSION := $(lastword $(shell $(PREFIX)g++$(SUFFIX) -dM -E - <			\
+				 /dev/null | grep __GNUC__))
+GNUC_BEFORE5 := $(filter $(GNUC_VERSION),1 2 3 4)  
+ifneq ($(words [$(strip $(GNUC_BEFORE5)])),2) 
+	ISACSII-FIX = -std=gnu++11 -D isacii=__isacii
+endif
 CFLAGS += 																	\
   $(addprefix -I,$(INCLUDES) $(ARDUINO-DIR))								\
   $(addprefix -D,$(CXX-DEFS))												\
@@ -116,6 +124,7 @@ METRIC-FLAGS +=																\
   -Wl,-T"$(ARDUINO-DIR)/mk20dx256.ld"										\
   -Xlinker																	\
   --gc-sections																\
+  $(ISACSII-FIX)															\
 
 SFLAGS := 																	\
   --format=sysv																\
@@ -145,9 +154,19 @@ ARDUINO-OBJS := 															\
   usb_mem.o 																\
   usb_serial.o 																\
   yield.o 																	\
+  $(if $(wildcard $(ARDUINO-DIR)/EventResponder.cpp),EventResponder.o,)		\
 
-yield.o usb_desc.o DMAChannel.o: FILE-FLAGS:=-Wno-pedantic
-nonstd.o: FILE-FLAGS:=-w
+usb_desc.o DMAChannel.o	pins_teensy.o	: FILE-FLAGS:=-Wno-pedantic
+nonstd.o					: FILE-FLAGS:=-w
+yield.o						: FILE-FLAGS := $(ISACSII-FIX) -Wno-pedantic
+HardwareSerial1.o			: FILE-FLAGS := $(ISACSII-FIX)
+HardwareSerial2.o			: FILE-FLAGS := $(ISACSII-FIX)
+HardwareSerial3.o			: FILE-FLAGS := $(ISACSII-FIX)
+Print.o avr_emulation.o 	: FILE-FLAGS := $(ISACSII-FIX)
+main.o usb_inst.o teensy.o	: FILE-FLAGS := $(ISACSII-FIX)
+EventResponder.o			: FILE-FLAGS := $(ISACSII-FIX)
+11-short-values.o			: FILE-FLAGS := $(ISACSII-FIX)
+00-base.o					: FILE-FLAGS := $(ISACSII-FIX)
 
 COJSON-OBJS :=																\
   common.o 																	\
@@ -164,7 +183,6 @@ OBJS := 																	\
 TESTS-BASIC := $(wildcard $(addprefix $(BASE-DIR)/suites/basic/, *.c *.cpp))
 TESTS-BENCH := $(wildcard $(addprefix $(BASE-DIR)/suites/bench/, *.c *.cpp))
 TESTS-HOST  := $(wildcard $(addprefix $(BASE-DIR)/suites/host/,  *.c *.cpp))
-TESTS-REST  := $(wildcard $(addprefix $(BASE-DIR)/suites/http/,  *.c *.cpp))
 TESTS-ALL   := $(sort $(notdir $(TESTS-BASIC) $(TESTS-BENCH)))
 
 teensy3-OBJS := $(patsubst %.c,%.o,$(TESTS-ALL:.cpp=.o))
@@ -243,4 +261,3 @@ rebuild: clean $(TARGET)
 
 clean:
 	@rm -f *.o *.map *.size $(TARGET-DIR)/$(TARGET).hex $(TARGET-DIR)/$(TARGET).elf
-

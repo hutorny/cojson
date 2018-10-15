@@ -61,7 +61,7 @@ static const value& complex() {
 	>();
 }
 
-inline const char* get() { return cpod()->s; }
+inline const char* get() noexcept { return cpod()->s; }
 typedef accessor::function<CPod,cpod> X;
 
 static const value& cpodo() {

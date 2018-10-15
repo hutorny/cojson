@@ -165,7 +165,8 @@ Test006 Test006::tests[] = {
 	RUN("edo.read", {
 		cstream inp(CSTR("{\"c\":100,\"i\":200,\"l\":300,\"u\":400,\"s\":\"100200300400500\"}"));
 		lexer in(inp);
-		return _R(edo.read(in) &&  edo.write(env.output),env);				}),
+		Edo l(edo);
+		return _R(l.read(in) &&  l.write(env.output),env);				}),
 	RUN("Read(edo)", {
 		cstream inp(CSTR("{\"i\":210,\"l\":310,\"s\":\"000210310000500\"}"));
 		lexer in(inp);

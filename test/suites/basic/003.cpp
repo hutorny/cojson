@@ -112,7 +112,9 @@ Edo* Edo::instance() noexcept { return &edo; }
 static const value& edox() {
 	return V<Edo::X, O<Edo,
 		Q<Edo, i, short, &Edo::get_i>,
-		Q<Edo, l, long, &Edo::set_l>
+		Q<Edo, l, long, &Edo::set_l>,
+		Q<Edo, s, short, nullptr, &Edo::set_i>,
+		Q<Edo, u, short, &Edo::get_i,nullptr>
 	>>();
 }
 

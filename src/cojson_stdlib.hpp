@@ -23,7 +23,12 @@
 
 #include <string>
 #include <vector>
-#include <cojson.hpp>
+#if __cplusplus >= 201703L && (!defined(__GNUC__) || __GNUC__ >= 7)
+#	include <cojson_autos.hpp>
+#	define WITH_COJSON_AUTOS
+#else
+#	include <cojson.hpp>
+#endif
 
 namespace cojson {
 
@@ -68,6 +73,7 @@ bool read_string(String& dst, lexer& in) throw()  {
 	ctype ct;
 	bool first = true;
 	typename String::value_type chr;
+	dst.clear();
 	while( hasbits((ct=in.string(chr, first)), ctype::string | ctype::hex) ) {
 		dst.push_back(chr);
 		first = false;
@@ -188,6 +194,7 @@ inline const details::property<C>&  PropertyStdVector() noexcept {
 		using T = typename Vector::value_type;
 		cstring name() const noexcept { return id(); }
 		bool read(C& obj, details::lexer& in) const noexcept {
+			(obj.*M).clear();
 			return details::collection<>::read(*this, obj, in);
 		}
 		bool write(const C& obj, details::ostream& out) const noexcept {
@@ -246,19 +253,21 @@ private:
 public:
 	inline ostream(Ostream& o) noexcept : out(o) {}
 	bool put(char_t c) noexcept {
-		if( out.put(c).good() ) return true;
+		out.put(c);
+		if( out.good() ) return true;
 		details::ostream::error(details::error_t::ioerror);
 		return false;
 	}
 };
 
 template<class Istream>
-class istream : public details::lexer, public details::istream {
+class istream : public details::lexer, protected details::istream {
 private:
 	Istream& in;
 public:
 	bool get(char_t& c) noexcept {
-		if( in.get(c).good() ) return true;
+		in.get(c);
+		if( in.good() ) return true;
 		if( in.eof() ) {
 			details::istream::error(details::error_t::eof);
 			c = iostate::eos_c;
@@ -268,6 +277,7 @@ public:
 		}
 		return false;
 	}
+	using lexer::error;
 public:
 	inline istream(Istream& i) noexcept
 	  :	lexer(static_cast<details::istream&>(*this)), in(i) {}
@@ -316,4 +326,128 @@ inline const details::property<C> & P() {
 	return details::PropertyStdVector<C, id, Vector, M, S>();
 }
 
+#ifdef WITH_COJSON_AUTOS
+
+namespace details {
+
+template<class C, typename T, class A>
+struct Make<std::vector<T,A> C::*> {
+	using Class = C;
+	using value_type = T;
+	template<std::vector<T,A> C::* Member>
+	static inline const property<C>& item() noexcept {
+		return PropertyStdVector<C, nameof<Member>, std::vector<T,A>, Member>();
+	}
+};
+
+template<class C, class Vector>
+struct Make2<Vector C::*, const clas<typename Vector::value_type>& (*)() noexcept> {
+	using Class = C;
+	using value_type = typename Vector::value_type;
+	template<Vector C::*Member,const details::clas<value_type>& S()>
+	static inline const property<C>& item() noexcept {
+		return PropertyStdVector<C, nameof<Member>, Vector, Member, S>();
+	}
+};
+
+
+
 }
+#endif
+
+
+namespace details {
+
+template<typename T>
+inline constexpr bool isgood(T);
+
+template<>
+inline constexpr bool isgood<bool>(bool result) { return result; }
+
+template<>
+inline constexpr bool isgood<error_t>(error_t result) {
+	return result == error_t::noerror;
+}
+
+
+template<class Stream, class Class,
+	bool hasjson = false, bool haswrite = false>
+struct operator_write {
+	static Stream& write(Stream& stream, const Class& object) {
+		static_assert(hasjson || haswrite ,"No serializer available");
+		return stream;
+	}
+};
+
+template<class Stream, class Class, bool hasjson>
+struct operator_write<Stream, Class, hasjson, true> {
+	static Stream& write(Stream& stream, const Class& object) {
+	    wrapper::ostream<Stream> out(stream);
+	    object.write(out);
+		return stream;
+	}
+};
+
+template<class Stream, class Class>
+struct operator_write<Stream, Class, true, false> {
+	static Stream& write(Stream& stream, const Class& object) {
+	    wrapper::ostream<Stream> out(stream);
+	    object.json().write(object, out);
+		return stream;
+	}
+};
+
+template<class Stream, class Class,
+	bool hasjson = false, bool hasread = false>
+struct operator_read {
+	static Stream& read(Stream& s, Class& o) {
+		static_assert(hasjson || hasread ,"No deserializer available");
+		return s;
+	}
+};
+
+template<class Stream, class Class, bool hasjson>
+struct operator_read<Stream, Class, hasjson, true> {
+	static Stream& read(Stream& stream, Class& object) {
+	    wrapper::istream<Stream> in(stream);
+	    if( !isgood((object.read(in),true)) || !isgood(in.error()) ) {
+	    	stream.setstate(stream.failbit);
+	    }
+		return stream;
+	}
+};
+
+template<class Stream, class Class>
+struct operator_read<Stream, Class, true, false> {
+	static Stream& read(Stream& stream, Class& object) {
+	    wrapper::istream<Stream> in(stream);
+	    if( !isgood(object.json().read(object, in)) || !isgood(in.error()) ) {
+	    	stream.setstate(stream.failbit);
+	    }
+		return stream;
+	}
+};
+}
+
+namespace operators {
+/** operator<<
+ *  writes object as JSON to an std::ostream compatible stream				 */
+template<class Stream, class Class>
+inline Stream& operator<<(Stream& stream, const Class& object) {
+	return details::operator_write<Stream, Class,
+		detectors::has_json<Class>::value,
+		detectors::has_write<Class,details::ostream&>::value
+	>::write(stream,object);
+}
+
+/** operator>>
+ * reads JSON object from an std::istream compatible stream					*/
+template<class Stream, class Class>
+inline Stream& operator>>(Stream& stream, Class& object) {
+	return details::operator_read<Stream, Class,
+		detectors::has_json<Class>::value,
+		detectors::has_read<Class,details::lexer&>::value
+	>::read(stream,object);
+}
+
+}}

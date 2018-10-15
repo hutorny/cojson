@@ -80,6 +80,8 @@ char32-OBJS	      := 072.o
 overflow-OBJS     := 034.o
 saturate-OBJS     := 034.o
 
+80.o: FILE-FLAGS := -Wno-missing-field-initializers
+
 OBJS := 																	\
   $(COJSON-OBJS)															\
 
@@ -96,7 +98,7 @@ CPPFLAGS += 																\
   -ffunction-sections  														\
   -fdata-sections															\
   -std=c++1y  																\
-
+  -Wno-noexcept-type
 
 CFLAGS += 																	\
   $(addprefix -I,$(INCLUDES))												\
@@ -128,7 +130,7 @@ vpath %.c   $(subst $(eval) ,:,$(SRC-DIRS) $(HOST-SRC-DIRS))
 
 %.o: %.cpp
 	@echo "    $(BOLD)c++$(NORM)" $(notdir $<)
-	$(CXX) $(CPPFLAGS) $($(TARGET)-FLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $($(TARGET)-FLAGS) $(FILE-FLAGS) -c -o $@ $<
 
 .SECONDARY:
 

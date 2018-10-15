@@ -47,9 +47,17 @@ static result_t test_conversion(const Environment& env, double val,
 	out.put(0);
 	double check = atof(out.begin());
 	if( fabs(val - check)/fabs(val + check) > 5*exp_10<double>(-precision) ) {
+#	ifdef __AVR__
+		char temp[32];
+		dtostrf(val, 16, precision+4, temp);
+		env.msg(LVL::normal,
+			"failed with p = %d: \"%s\"!=\"%s\"\n",
+			precision, temp, out.begin());
+#	else
 		env.msg(LVL::normal,
 			"failed with p = %d: %.16g != %.16g \"%.*g\"!=\"%s\"\n",
 			precision, val, check, precision, val, out.begin());
+#	endif
 		return result_t::bad;
 	}
 	return result_t::success;

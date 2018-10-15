@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> -->
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head>
 	<title>cojson tutorial</title>
@@ -35,6 +35,7 @@ table.table { border-collapse: collapse; border-spacing: 0; padding:0px; margin-
 .table.guide td .syntaxhighlighter { margin: 0 !important; }
 .table.guide td:nth-child(2) .syntaxhighlighter, .table.guide td.smaller .syntaxhighlighter { font-size: 75% !important; }
 .table.guide td sup+div { width:99% !important; }
+#appendix-I { margin-bottom: 0.3em; }
 @media print { 
 .table.guide td:nth-child(3) { font-size: 80%; } }
 </style>
@@ -47,9 +48,11 @@ table.table { border-collapse: collapse; border-spacing: 0; padding:0px; margin-
 		<div id="content" class="hfeed">
 
 
-			<div id="post-617" class="hentry p1 post publish author-admin category-cojson category-projects y2015 m10 d19 h05">
-				<h1 class="entry-title" style="text-align:center;font-stretch: expanded;">cojson tutorial</h1>
-<div class="entry-content">
+
+
+			<div id="post-617" class="hentry p1 post publish author-admin category-cojson y2015 m10 d19 h05">
+				<h2 class="entry-title">cojson tutorial v2.0</h2>
+				<div class="entry-content">
 <h3>1. Getting Started</h3>
 <p>For a quick start the easiest way is using <a href="https://hutorny.in.ua/codegen/cojson.html" target="_blank"><span class="term">codegen</span></a>.
 Paste you <span class="term">JSON</span> into the left editor, hit button <span class="term">Run</span> and collect results in the right editor.
@@ -59,6 +62,7 @@ of your <span class="term">JSON</span> object by mapping its elements to <span c
 bind them to members of your C++ class (see <a href="#section-2">Section 2</a>),
 implement the interfaces for the data streams you have, and build <span class="term">cojson</span> library 
 with your application (see <a href="#section-3">Section 3</a>).</p>
+<span id="more-617"></span>
 <p>The library provides implementation for parsing/serialization of basic types. However, your application is 
 not limited to those types only. You can add a reader/writer for your own type and use it with 
 <span class="term">cojson</span> (see <a href="#section-5.1">Sections 5.1, 5.2</a>). Also, if signatures of getters/setters 
@@ -66,8 +70,8 @@ in your application do not match expected in <span class="term">cojson</span>, y
 with the signatures you have (see <a href="#section-5.3">Section 5.3</a>).</p>
 <p>It worth to mention that <span class="term">cojson</span> neither provides nor allocates any data storage. 
 Instead your application binds the data storage to <span class="term">cojson</span> elements.</p>
-<h3 id="section-2">2. Defining Structure</h3>
-<p><span class="term">JSON</span> structure is defined as a hierarchy of template functions. 
+<h3 id="section-2">2. Defining Model</h3>
+<p><span class="term">JSON</span> model is defined as a hierarchy of template functions. 
 Parameters of these templates define <span class="term">JSON</span> member name, data type, 
 and the storage access method - a member pointer or getter/setter methods. 
 There are four groups of template functions each having its specific purpose and name:</p>
@@ -154,7 +158,7 @@ O&lt;Pdo, // class-bound object { &quot;prop&quot;:2 }
 <h5 id="section-2.2.2">2.2.2. Nested Objects</h5>
 <p>Both class-bound	and statically-bound classes allow nested objects.
 Nesting in a class-bound object is achieved with a special version of template <span class="code">P</span> that
-accepts additional parameter - structure definition for the nested object.</p>
+accepts additional parameter - model definition for the nested object.</p>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
 struct Config {
     struct Wan {
@@ -162,7 +166,7 @@ struct Config {
     } wan;
     static constexpr const char* name_wan() noexcept { return &quot;wan&quot;; }
     static constexpr const char* name_uptime() noexcept { return &quot;uptime&quot;; }
-    static const clas&lt;Config&gt;&amp; structure() noexcept {
+    static const clas&lt;Config&gt;&amp; json() noexcept {
         return
             O&lt;Config,                                                              //{
                 P&lt;Config, name_wan, Config::Wan, &amp;Config::wan,                     //  &quot;wan&quot;:
@@ -248,7 +252,7 @@ V&lt;int,4,data&gt;().write(out); // [1,2,3,4]
 
 <h5 id="section-2.3.3">2.3.3. Arrays of Objects</h5>
 <p>Vectors are defined with template <span class="code">V&lt;X,S&gt;</span>, 
-where X is an accessor class and S is the object's structure definition.
+where X is an accessor class and S is the object's model definition.
 Two accessors - <span class="code">accessor::array</span> and <span class="code">accessor::vector</span>
 implement two possible bindings to an indexer or to a static array.</p>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
@@ -270,7 +274,7 @@ void tutorial_example4(lexer&amp;, ostream&amp; out) {
 }
 </pre>
 	
-<h5 id="section-2.3.1">2.3.4. Nested Arrays</h5>
+<h5 id="section-2.3.4">2.3.4. Nested Arrays</h5>
 <p>An ordered list may seamlessly include another list or vector.</p>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
 int data[4] = { 1,2,3,4 };
@@ -288,7 +292,7 @@ V&lt;                      // [
 array and implementing custom reader/writer for that type.</p>	
 
 <h5 id="section-2.3.1">2.3.5. Arrays in Classes</h5>
-<p>An array field of an C++ class can be added to <span class="term">cojson</span> structure
+<p>An array field of an C++ class can be added to <span class="term">cojson</span> model
 with special form of template <span class="code">P</span>.</p>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
 struct Pdo {
@@ -305,7 +309,7 @@ O&lt;Pdo,
 <p>Array items from the <span class="term">JSON</span> text that do not fit 
 <span class="term">cojson</span> array definition are skipped and the 
 <span class="code">overrun</span> flag is set in the <span class="code">iostate::error</span>
-If input array is shorter than defined in the structure, remaining items are not updated.</p>
+If input array is shorter than defined in the model, remaining items are not updated.</p>
 
 <h4 id="section-2.4">2.4. Numbers</h4>
 <p>A number is defined with template <span class="code">V</span> that accepts the destination data 
@@ -334,15 +338,66 @@ V&lt;info&gt;().write(out);
 </pre>	
 
 <h4 id="section-2.6">2.6. Reading/Writing</h4>
+<h5 id="section-2.6.1">2.6.1. Via <span class="code">std::iostream</span> or similar</h4>
+<p><span class="code">cojson::wrapper</span> namespace provides template wrappers for C++ streams:
+<span class="code">istream</span> and <span class="code">ostream</span>, for reading and writing
+respectively. They require the wrapped streams to provide <span class="code">get(char) good() eof() / put(char) good()</span>
+and can wrap almost any of the <span class="term">stdlib</span> streams.
+<pre class="brush: cpp; collapse: true; light: false; title: Example; toolbar: true; notranslate" title="Example">
+#include &lt;iostream&gt;
+#include &lt;cojson_stdlib.hpp&gt;
+
+static constexpr const char* Int() noexcept { return &quot;Int&quot;; }
+struct MyClass {
+	int Int;
+} obj;
+cojson::wrapper::istream&lt;std::istream&gt; in(cin);
+cojson::wrapper::ostream&lt;std::ostream&gt; out(cout);
+O&lt;MyClass,P&lt;MyClass,Int,decltype(MyClass::Int),&amp;MyClass::Int&gt;&gt;().read(obj, in);
+O&lt;MyClass,P&lt;MyClass,Int,decltype(MyClass::Int),&amp;MyClass::Int&gt;&gt;().write(obj, out);
+</pre>
+</p>
+
+<h5 id="section-2.6.2">2.6.2. Via a memory buffer</h5>
+<p><span class="code">cojson::wrapper</span> namespace provides wrappers for memory buffers: 
+<span class="code">buffer</span> and <span class="code">memstream</span>. 
+Both read from and write to a single memory block. <span class="code">memstream</span> maintains 
+two separate position pointers while <span class="code">buffer</span> maintains only one.
+When no writing is needed, <span class="code">buffer</span> may by supplied with a constant zero-delimited string.
+<pre class="brush: cpp; collapse: true; light: false; title: Example; toolbar: true; notranslate" title="Example">
+#include &lt;cojson.hpp&gt;
+using namespace cojson;
+struct MyClass {
+	int Int;
+	static constexpr const char* Int_() noexcept { return &quot;Int&quot;; }
+	static inline const auto&amp; json() noexcept {
+		return O&lt;MyClass,P&lt;MyClass,&amp;MyClass::Int_,decltype(MyClass::Int),&amp;MyClass::Int&gt;&gt;();
+	}
+	inline int read(const char* data) noexcept {
+		wrapper::buffer input(data);
+		details::lexer in(input);
+		return json().read(*this, in) ? input.count() : -1;
+	}
+	inline int write(char* data, cojson::size_t size) noexcept {
+		wrapper::buffer output(data, size);
+		return json().write(*this, output) ? output.count() : -1;
+	}
+};
+</pre>
+</p>
+<h5 id="section-2.6.3">2.6.3 Via a user-defined reader/writer</h5>
 <p>To read a <span class="term">JSON</span> text you need to pass it through 
-<span class="code">istream</span> interface and <span class="code">lexer</span> instance.
-<span class="code">cojson::wrappers</span> namespace contains implementation of some wrappers.</p> 
-<p>For writing you need an <span class="code">ostream</span> interface. 
+<span class="code">istream</span> interface to a <span class="code">lexer</span> 
+instance and then pass it to the model's read method.<br>
+For writing you need an <span class="code">ostream</span> interface 
 Please refer to <a href="#section-3">Section-3</a> for more details.</p>
 <p>When read/write operation is complete, application, may examine stream's 
 <span class="code">error()</span> flags to identify possible errors.</p>
 <p>If your <span class="term">JSON</span> text may start with <span class="term">BOM</span>
-sequence, call <span class="code">lexer.skip_bom()</span></p>
+sequence, call <span class="code">lexer.skip_bom()</span>.</p>
+<p>Please also refer to 
+<a href="section-5.1">Section 5.1</a> and <a href="#section-5.2">Section 5.2</a> for details.
+</p>
 <pre class="brush: cpp; collapse: true; light: false; title: Examples; toolbar: true; notranslate" title="Examples">
 #include &lt;iostream&gt;
 #include &quot;cojson.hpp&quot;
@@ -395,7 +450,8 @@ int main(int, char**) {
 	V&lt;sizeof(answer),answer&gt;().read(in);
 	return 0;
 }	
-</pre>	
+</pre>
+
 <h3 id="section-3">3. Implementing Stream Interfaces</h3>
 <p><span class="term">cojson</span> provides  implementation of I/O stream interfaces for
 character buffers and wrappers for <span class="code">std::istream</span> and 
@@ -423,8 +479,7 @@ struct my_ostream : ostream {
     }
 };
 </pre>
-<a id="build"></a>
-<h3 id="section-4">4. Building</h3>
+<a id="build"></a><h3 id="section-4">4. Building</h3>
 <p>To build application with <span class="term">cojson</span>, add its source 
 directory <span class="code">cojson/src</span> to the include path, add the following source files in your project:</p>
 <ul>
@@ -583,6 +638,7 @@ This allows to implement better error reporting by overriding iostate::error met
 <tr><td rowspan="2">cstring</td><td>avr_progmem</td><td>use progmem for defining literals and member names (AVR only)</td></tr>
 <tr><td>const_char</td><td>literals and member names are defined constant strings (const char*), default</td></tr>
 </table>
+static constexpr cstring_is cstring = cstring_is::avr_progmem;
 <h3 id="section-R">Normative References</h3>
 <ol>
 <li><a href="https://tools.ietf.org/html/rfc7159" name="RFC7159" target="_blank">RFC7159</a></li>
@@ -772,8 +828,8 @@ Array of objects</td></tr>
 </table>
 <p><sup id="fn1">1</sup>NAME here is a macro that defines a <span class="term">cojson</span> name</p>
 <pre class="brush: cpp; title: ; notranslate" title="">#define NAME(s) static inline constexpr const char* s() noexcept { return #s; }</pre>
-				</div>
-			</div><!-- .post -->
+
+				</div><!-- .post -->
 
 		</div><!-- #content .hfeed -->
 	</div><!-- #container -->

@@ -1,0 +1,331 @@
+<!-- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> -->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+<head>
+	<title>cojson tutorial</title>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+	<link rel="stylesheet" type="text/css" media="screen,projection" href="http://hutorny.in.ua/wp-content/themes/veryplaintxt/style.css" title="veryplaintxt" />
+	<link rel="stylesheet" type="text/css" media="print" href="http://hutorny.in.ua/wp-content/themes/veryplaintxt/print.css" />
+
+<script type="text/javascript">
+	 var loading_url = "http://hutorny.in.ua/wp-content/plugins/thumbnail-viewer/images/loadingImage.gif";
+</script>
+
+<style type="text/css" media="all">
+body{font-family:'trebuchet ms',helvetica,sans-serif;font-size:90%;}
+body div#container { float: left; margin: 0 -200px 2em 0; } body div#content { margin: 3em 200px 0 0; } body div.sidebar { float: right; }
+body div#content div.hentry{text-align:justify;}
+body div#content h2,div#content h3,div#content h4,div#content h5,div#content h6{font-family:verdana,geneva,sans-serif;}
+body div#wrapper{max-width:65em;min-width:35em;width:80%;}
+body div.sidebar{text-align:left;}
+</style>
+<style type="text/css" id="syntaxhighlighteranchor"></style>
+<style>.term { font-family: "courier new",courier,monospace; }
+span.code { font-family: "courier new",courier,monospace;  font-style: italic;}
+table.table { border-collapse: collapse; border-spacing: 0; padding:0px; margin-left: auto; margin-right: auto; border:1px solid #000000; }
+.table td{ border:1px solid #000000; vertical-align:middle; background-color:#ffffff; text-align:left; padding:4px; }
+.table td:first-child { text-align:left; }
+.table th{ border:1px solid #000000; background-color:#cccccc; text-align:center; font-weight:bold; padding:4px; }
+.table.functions th { text-align:center; font-family: "courier new",courier,monospace; }
+.table.guide { width:100%; }
+.table.guide th, .table.guide td:first-child { text-align: center !important; }
+.table.guide th, .table.guide td { width:20%; }
+.table.guide th:last-child, .table.guide td:last-child { width:45%; }
+.table.guide th:first-child, .table.guide td:first-child { width:15%; }
+.table.guide td .syntaxhighlighter { margin: 0 !important; }
+.table.guide td:nth-child(2) .syntaxhighlighter, .table.guide td.smaller .syntaxhighlighter { font-size: 75% !important; }
+.table.guide td sup+div { width:99% !important; }
+h3#appendix-I { margin-bottom: 0 }
+@media print { 
+.table.guide td:nth-child(3) { font-size: 80%; } }
+</style>
+</head>
+<body class="wordpress single">
+
+<div id="wrapper">
+
+	<div id="container">
+		<div id="content" class="hfeed">
+			<div id="post-1070" class="hentry p1 post draft author-Eugene category-cojson y2018 m10 d15 h11">
+				<h2 class="entry-title">cojson tutorial for C++17</h2>
+				<div class="entry-content">
+<p><span class="term">C++17</span> has simplified use of template parameters. Instructions, given in this tutorial, describes how to define 
+<span class="term">JSON</span> model with <span class="term">cojson::autos</span> templates.
+<br>Note: <span class="term">GCC 7</span> or higher is required to compile <span class="code">cojson_autos.hpp</span> !</p>
+<span id="more-1070"></span>
+<h3 id="section-1">1. Defining Model</h3>
+<p><span class="term">JSON</span> model is defined as a template function, with pointers to all serializable members as the template parameters.
+Everything else - <span class="term">JSON</span> property name, data type, array extents, is deduced from pointer-to-member by <span class="term">cojson::autos</span> templates.
+<br><span class="term">cojson::autos</span> defines two groups of template functions each having its specific purpose and name:
+<table class="table functions">
+	<tr><th>O&lt;class,...&gt;()</th><td>Object&lt;class, ...&gt;()</td><td>Defines an object mapped to a C++ class</td></tr>
+	<tr><th>P&lt;auto,auto&gt;()</th><td>Property&lt;auto,auto&gt;()</td><td>Defines an object property,<br>bound to getter/setter or to an inner object</td></tr>
+</table>
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+struct MyClass {
+	int Int;
+} obj;
+
+O&lt;MyClass,&amp;MyClass::Int&gt;().read(obj, in);
+</pre>
+</p>
+
+<h4 id="section-1.1">1.1. Objects</h4>
+<p>Class-bound objects are defined with variadic template <span class="code">O&lt;...&gt;</span> that accepts bounding 
+class as the first parameter followed by the list of member pointers, method pointers or <span class="code">P</span> templates.</p> 
+
+<h4 id="section-1.2">1.2. Names</h4>
+<p><span class="term">cojson::autos</span> templates deduce names from the identifiers. E.g. member <span class="code">Int</span> 
+will be mapped to JSON property <span class="code">"Int"</span>. In a case, when this approach is not suitable, a <span class="code">cojson::P</span> 
+template should be used to define a property with an alternate name.</p>
+
+<h3 id="section-2">2. Scalar properties</h3>
+
+<h4 id="section-2.1">2.1. Members</h4>
+<p>A class's member is referred by its pointer to member, e.g. <span class="code">&MyClass::Int</span></p>
+
+<h4 id="section-2.2">2.2. Methods</h4>
+<p>A property, mapped to a single getter or setter is referred by its pointer to method, e.g. <span class="code">&MyClass::setLatch</span>.
+A property, that needs two methods - getter and setter, is defined by <span class="code">cojson::autos::P</span> template, e.g. 
+<span class="code">P&lt;&MyClass::getLatch, &MyClass::setLatch&gt;</span>.</p>
+
+<h4 id="section-2.3">2.3. Immutable String</h4>
+<p>Immutable zero-terminated strings of unspecified length can be provided:
+<ol style="list-style: lower-alpha;">
+<li>by a pointer to (const) member of <span class="code">const char*</span></li>
+<li>by a pointer to method returning <span class="code">const char*</span></li>
+<li>by template <span class="code">PropertyStaticString</span> with the class and a pointer to static member of <span class="code">const char*</span></li>
+<li>by template <span class="code">PropertyFunctionString</span> with the class and a pointer to static method returning <span class="code">const char*</span></li>
+</ol>
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+struct MyClass {
+	const char* const a  = &quot;a&quot;;
+	const char* b() const noexcept { return &quot;b&quot;; }
+	static const char* const c;
+	static const char* d() noexcept { return &quot;d&quot;; }
+};
+
+O&lt;MyClass, &amp;MyClass::a, &amp;MyClass::b,
+	PropertyStaticString&lt;MyClass, &amp;MyClass::c&gt;,
+	PropertyFunctionString&lt;MyClass, &amp;MyClass::d&gt;
+&gt;();
+</pre>
+</p>
+<h4 id="section-2.4">2.4. Mutable String Members</h4>
+<p>Mutable strings can be bound to
+<ol style="list-style: lower-alpha;">
+<li>a string of predefined capacity (<span class="code">char[N]</span>) by a pointer to member.</li>
+<li>std::string by a pointer to member.</li>
+</ol>
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+#include &lt;string&gt;
+#include &lt;cojson_stdlib.hpp&gt; //support for std::string properties
+struct MyClass {
+	char msg[32];
+	std::string str;
+};
+O&lt;MyClass, &amp;MyClass::msg,  &amp;MyClass::str&gt;();
+</pre>
+</p>
+<h4 id="section-3">3. Nested Objects</h5>
+<p>Nested objects are mapped to a member of a class that has its own <span class="term">json</span> model by using <span class="code">P</span>
+template with pointer to member and pointer to method or function returning its model. 
+<pre class="brush: cpp; title: ; notranslate" title="">
+struct Outer {
+	bool Bool;
+    struct Inner {
+        int Int;
+    } obj;
+};
+O&lt;Outer, &amp;Outer::Bool,
+	P&lt;&amp;Outer::obj, O&lt;Outer::Inner, &amp;Outer::Inner::Int&gt;&gt;&gt;();
+</pre> 
+</p>
+<h3 id="section-4">4. Arrays</h3>
+
+<h4 id="section-4.1">4.1. Vectors - arrays of integral values</h4>
+<p>Vectors are bound by a pointer to member of an array type or <span class="code">std::vector</span> type
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+#include &lt;vector&gt;
+#include &lt;cojson_stdlib.hpp&gt; //support for std::vector properties
+struct MyClass {
+	int vector[3];
+	std::vector&lt;int&gt; stdvect;
+};
+O&lt;MyClass, &amp;MyClass::vector, &amp;MyClass::stdvect&gt;();
+</pre>
+</p>
+
+<h4 id="section-4.2">4.2. Strings - arrays of string values</h4>
+<p>String arrays are bound by a pointer to member of a two-dimensional array type (<span class="code">char[N][M]</span>) or to a <span class="code">std::vector&lt;std::string&gt;</span>
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+struct MyClass {
+	int strings[3][32];
+	std::vector&lt;std::string&gt; stdstrings;
+};
+O&lt;MyClass, &amp;MyClass::strings, &amp;MyClass::stdstrings&gt;();
+</pre>
+</p>
+<h4 id="section-4.3">4.3. Arrays of Objects</h4>
+<p>Similarly to nested objects, arrays of objects are mapped to an array member (or <span class="code">std::vector</span>) 
+of a class that has its own <span class="term">json</span> model by using <span class="code">P</span> 
+template with pointer to member and pointer to method or function returning its model. 
+<pre class="brush: cpp; title: ; notranslate" title="">
+struct Outer {
+	bool Bool;
+	struct Inner {
+		int Int;
+	} objs[4];
+	std::vector&lt;Inner&gt; Objs;
+};
+O&lt;Outer, &amp;Outer::Bool, P&lt;&amp;Outer::objs, O&lt;Inner, &amp;Inner:Int&gt;&gt;&gt;();
+O&lt;Outer, &amp;Outer::Bool, P&lt;&amp;Outer::Objs, O&lt;Inner, &amp;Inner:Int&gt;&gt;&gt;();
+</pre> 
+</p>
+<h4 id="section-4.4">4.4. Lists - arrays of heterogeneous values</h4>
+<p><span class="term">cojson</span> is designed to work with a predefined structure and this design
+imposes certain limitation on arrays - a heterogeneous array (<em>ordered list</em>) must have each of its item defined,
+fixed to a given type and bound to a given member. A list is defined with <span class="code">PropertyList</span> template.
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+struct MyClass {
+	int list;
+	bool next;
+	char last[32];
+};
+Object&lt;MyClass, PropertyList&lt;&amp;MyClass::list, &amp;MyClass::next, &amp;MyClass::last&gt;&gt;();
+</pre>
+This will correspond to the following json:
+<pre class="brush: jscript; title: ; notranslate" title="">
+{&quot;list&quot;:[0, false, &quot;&quot;]}
+
+</pre>
+</p>
+
+<h3 id="section-5">5. Reading/Writing</h3>
+<h4 id="section-5.1">5.1. Via <span class="code">std::iostream</span> or similar</h4>
+<p><span class="code">cojson::wrapper</span> namespace provides template wrappers for C++ streams:
+<span class="code">istream</span> and <span class="code">ostream</span>, for reading and writing
+respectively. They require the wrapped streams to provide <span class="code">get(char) good() eof() / put(char) good()</span>
+and can wrap almost any of the <span class="term">stdlib</span> streams.
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+struct MyClass {
+	int Int;
+} obj;
+cojson::wrapper::istream&lt;std::istream&gt; in(cin);
+cojson::wrapper::ostream&lt;std::ostream&gt; out(cout);
+
+O&lt;MyClass,&amp;MyClass::Int&gt;().read(obj, in);
+O&lt;MyClass,&amp;MyClass::Int&gt;().write(obj, out);
+</pre>
+</p>
+
+<h4 id="section-5.2">5.2. With <span class="code">operator&lt;&lt;</span>&nbsp;&nbsp;<span class="code">operator&gt;&gt;</span></h4>
+<p><span class="code">cojson::operator</span> namespace provides template operators 
+<span class="code">operator&lt;&lt;</span>&nbsp;/&nbsp;<span class="code">operator&gt;&gt;</span>. These templates require 
+the class to implement either <span class="code">json()</span> method or 
+<span class="code">read(cojson::details::lexer&)</span>/<span class="code">write(cojson::details::ostream&)</span>
+
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+#include &lt;cojson_stdlib.hpp&gt;
+using namespace std;
+using namespace cojson;
+using namespace cojson::autos;
+using namespace cojson::operators;
+
+struct MyClass {
+	int Int;
+	static inline const auto&amp; json() noexcept { 
+		return O&lt;MyClass,&amp;MyClass::Int&gt;();
+	}
+} obj;
+
+cin &gt;&gt; obj;
+cout &lt;&lt; obj &lt;&lt; endl;
+</pre>
+</p>
+
+<h4 id="section-5.3">5.3. Via a memory buffer</h4>
+<p><span class="code">cojson::wrapper</span> namespace provides wrappers for memory buffers: 
+<span class="code">buffer</span> and <span class="code">memstream</span>. 
+Both read from and write to a single memory block. <span class="code">memstream</span> maintains 
+two separate position pointers while <span class="code">buffer</span> maintains only one.
+When no writing is needed, <span class="code">buffer</span> may by supplied with a constant zero-delimited string.
+<pre class="brush: cpp; title: Example; notranslate" title="Example">
+#include &lt;cojson_stdlib.hpp&gt;
+using namespace cojson;
+using namespace cojson::autos;
+struct Pdo {
+	int Int;
+	static inline const auto&amp; json() noexcept {
+		return O&lt;Pdo,&amp;Pdo::Int&gt;();
+	}
+	inline int read(const char* data) noexcept {
+		wrapper::buffer input(data);
+		details::lexer in(input);
+		return json().read(*this, in) ? input.count() : -1;
+	}
+	inline int write(char* data, cojson::size_t size) noexcept {
+		wrapper::buffer output(data, size);
+		return json().write(*this, output) ? output.count() : -1;
+	}
+};
+</pre>
+</p>
+
+<h4 id="section-5.4">5.4. Via a user-defined reader/writer</h4>
+<p>Please refer to <span class="code">COJSON</span> tutorial 
+<a href="http://hutorny.in.ua/projects/cojson/cojson-tutorial#section-5.1">Section 5.1</a> and
+<a href="http://hutorny.in.ua/projects/cojson/cojson-tutorial#section-5.2">Section 5.2</a>
+for details.
+</p>
+<h3 id="section-1">6. Additional materials</h3>
+<p><a href="http://hutorny.in.ua/category/projects/cojson">List of COJSON-related posts</a></p>
+				</div>
+			</div><!-- .post -->
+
+		</div><!-- #content .hfeed -->
+	</div><!-- #container -->
+
+<script type='text/javascript' src='http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shCore.js?ver=3.0.9b'></script>
+<script type='text/javascript' src='http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shBrushCpp.js?ver=3.0.9b'></script>
+<script type='text/javascript' src='http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shBrushJScript.js?ver=3.0.9b'></script>
+<script type='text/javascript' src='http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/scripts/shBrushPlain.js?ver=3.0.9b'></script>
+<script type='text/javascript'>
+	(function(){
+		var corecss = document.createElement('link');
+		var themecss = document.createElement('link');
+		var corecssurl = "http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/styles/shCore.css?ver=3.0.9b";
+		if ( corecss.setAttribute ) {
+				corecss.setAttribute( "rel", "stylesheet" );
+				corecss.setAttribute( "type", "text/css" );
+				corecss.setAttribute( "href", corecssurl );
+		} else {
+				corecss.rel = "stylesheet";
+				corecss.href = corecssurl;
+		}
+		document.getElementsByTagName("head")[0].insertBefore( corecss, document.getElementById("syntaxhighlighteranchor") );
+		var themecssurl = "http://hutorny.in.ua/wp-content/plugins/syntaxhighlighter/syntaxhighlighter3/styles/shThemeEclipse.css?ver=3.0.9b";
+		if ( themecss.setAttribute ) {
+				themecss.setAttribute( "rel", "stylesheet" );
+				themecss.setAttribute( "type", "text/css" );
+				themecss.setAttribute( "href", themecssurl );
+		} else {
+				themecss.rel = "stylesheet";
+				themecss.href = themecssurl;
+		}
+		//document.getElementById("syntaxhighlighteranchor").appendChild(themecss);
+		document.getElementsByTagName("head")[0].insertBefore( themecss, document.getElementById("syntaxhighlighteranchor") );
+	})();
+	SyntaxHighlighter.config.strings.expandSource = '+ expand source';
+	SyntaxHighlighter.config.strings.help = '?';
+	SyntaxHighlighter.config.strings.alert = 'SyntaxHighlighter\n\n';
+	SyntaxHighlighter.config.strings.noBrush = 'Can\'t find brush for: ';
+	SyntaxHighlighter.config.strings.brushNotHtmlScript = 'Brush wasn\'t configured for html-script option: ';
+	SyntaxHighlighter.defaults['light'] = true;
+	SyntaxHighlighter.defaults['pad-line-numbers'] = true;
+	SyntaxHighlighter.all();
+</script>
+</div><!-- #wrapper -->
+
+</body><!-- end trasmission -->
+</html>

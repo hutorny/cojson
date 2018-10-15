@@ -258,11 +258,11 @@ bool serialize(double val, S& out, sshort precision = 6) noexcept {
 			if( fraction == 0 && notation == floating::notation::fixed )
 				return true;
 			fraction.skip(notation > floating::notation::zero_1);
+			was = false;
 			while( precision > 0 && fraction && fraction.get(digit,true) ) {
-				if( digit || precision > 1 ) {
+				if( digit || precision > 1 )
 					out.put('0' + digit);
-					--precision;
-				}
+				if( (was = was || digit) ) --precision;
 			}
 		}
 	} else

@@ -57,6 +57,7 @@ MSP430FLAGS :=																\
 CXX-DEFS := 																\
   COJSON_TEST_OMIT_NAMES													\
   BENCH_DATA_ATTR='__attribute__((section(".text")))'						\
+  GCC_BUG_52892
 
 
 CPPFLAGS += 																\
