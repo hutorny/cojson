@@ -19,7 +19,7 @@
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
-
+#ifdef __AVR__
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include "cojson.hpp"
@@ -43,7 +43,4 @@ ctype chartype(char_t c) noexcept {
 } /* avr: 284 bytes (Program/Data) */
 }
 }
-
-
-
-
+#endif

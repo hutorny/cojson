@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2017 Eugene Hutorny <eugene@hutorny.in.ua>
+ * Copyright (C) 2015, 2018 Eugene Hutorny <eugene@hutorny.in.ua>
  *
  * json_via_arduino_serial.cpp - example for using cojson with Arduiono Serial
  *
@@ -18,73 +18,109 @@
  * along with the COJSON Library; if not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  */
-
-#include "cojson.hpp"
 #include "Arduino.h"
-#ifdef CSTRING_PROGMEM
-#	include <avr/pgmspace.h>
-#	define NAME(s) static inline progmem<char> s() noexcept { 			\
-		static const char l[] __attribute__((progmem)) = #s; 			\
-		return progmem<char>(l);}
-#else
-#	define NAME(s) static inline constexpr const char_t* s() noexcept {	\
-		return #s;}
-#endif
-
-using namespace cojson;
-using cojson::details::progmem;
-
-class jsonw : public details::ostream {
-	Print& out;
-public:
-	inline jsonw(Print& o) noexcept : out(o) {}
-	bool put(char_t c) noexcept {
-		return out.write(c) == 1;
-	}
-};
-
-class jsonr : public details::lexer, private details::istream {
-	Stream& in;
-private:
-	bool get(char_t& c) noexcept {
-		int r = in.read();
-		if( r == -1 ) {
-			istream::error(details::error_t::eof);
-			c = iostate::eos_c;
-			return false;
-		}
-		c = static_cast<char_t>(r);
-		return true;
-	}
-public:
-	inline jsonr(Stream& i) noexcept
-	  :	lexer(static_cast<istream&>(*this)), in(i) {}
-};
-
-template<int id>
-struct pin {
-	static bool get() noexcept {
-		return digitalRead(id) == HIGH;
-	}
-	static void set(bool val) noexcept {
-		digitalWrite(id, val);
-	}
-};
+#include "cojson.h"
 
 
-struct led : pin<13> {
-	struct name {
-		NAME(led)
-	};
-	static const details::value& json() noexcept {
-		return V<M<name::led,accessor::functions<bool, led::get,led::set>>>();
-	}
-};
+namespace MyApp {
+    namespace name {
+#		ifdef __AVR__
+#		define CSTRING_NAME(a,b) inline cojson::cstring a() noexcept {\
+                static const char l[] __attribute__((progmem))= b;\
+                return cojson::cstring(l);\
+            }
+#		else
+#		define CSTRING_NAME(a,b) inline constexpr cojson::cstring a() noexcept{\
+                return b;\
+           }
+#		endif
+        CSTRING_NAME(led,"led")
+        CSTRING_NAME(blink,"blink")
+        CSTRING_NAME(Int,"int")
+        CSTRING_NAME(msg,"msg")
+#		undef CSTRING_NAME
+    }
 
-void json_read_write() {
-	jsonr in(Serial);
-	jsonw out(Serial);
-	led::json().read(in);
-	led::json().write(out);
+    struct MyClass {
+        bool led_get() const noexcept {
+        	return digitalRead(LED_BUILTIN);
+        }
+        void led_set(bool value) noexcept {
+        	digitalWrite(LED_BUILTIN, value & 1);
+        }
+        bool blink;
+        int Int;
+        char msg[32];
+    public:
+        static const cojson::details::clas<MyClass>& json() noexcept;
+        inline bool read(cojson::details::lexer& in) noexcept {
+            return json().read(*this, in);
+        }
+        inline bool write(cojson::details::ostream& out) const noexcept {
+            return json().write(*this, out);
+        }
+    };
+
+ /**************************************************************************/
+
+    const cojson::details::clas<MyClass>& MyClass::json() noexcept {
+        using namespace cojson;
+        using namespace cojson::accessor;
+
+        return
+            O<MyClass,
+            	P<MyClass, name::led, methods<
+                	MyClass, bool, &MyClass::led_get, &MyClass::led_set>>,
+                P<MyClass, name::blink, bool, &MyClass::blink>,
+                P<MyClass, name::Int, int, &MyClass::Int>,
+                P<MyClass, name::msg, 32, &MyClass::msg>
+            >();
+    }
+
+ /**************************************************************************/
 }
 
+MyApp::MyClass control { true, 10, "Hello JSON"};
+
+void setup() {
+  cojson::wrapper::iostream<decltype(Serial)> serialio(Serial);
+  pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(115200);
+  while (!Serial) {};
+  Serial.println("Arduino cojson example");
+  control.write(serialio);
+  Serial.print("\n:");
+}
+
+
+void blink(bool enable) {
+	static constexpr int period = 1000;
+	static auto last = millis();
+	static bool toggle = false;
+	if( millis() - last > period ) {
+		last = millis();
+		if( enable )
+			digitalWrite(LED_BUILTIN, toggle);
+		Serial.print((toggle ^= 1) ? "\r." : "\r:");
+	}
+}
+
+void loop() {
+	cojson::wrapper::iostream<decltype(Serial)> serialio(Serial);
+    serialio.echo(true);
+	while( !Serial.available() ) {
+		blink(control.blink);
+	}
+	if( Serial.peek() == '\r' )
+		Serial.read();
+	else
+		control.read(serialio);
+	Serial.println();
+	if( + serialio.error() ) {
+		Serial.println("JSON error");
+		serialio.clear();
+		while( Serial.available() ) Serial.read();
+	}
+	control.write(serialio);
+	Serial.println();
+}

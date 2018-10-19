@@ -86,10 +86,11 @@ var Options = {
 		name					: 'name',
 		compact					: false,
 		avr						: false,
+		arduino					: false,
 		example					: true,
 		strings_with_traling_0	: true,
 		rethrow 				: true,
-		options_version 		: 2
+		options_version 		: 3
 	};
 	const Sample = `{ 
 "list" : [1, "aaaa"],
@@ -130,7 +131,8 @@ function SaveCpp() {
 	var text = 
 		CojsonGenerator.fromText(Json.session.getValue(), Options);
 	Cpp.session.setValue(text);
-	writeFile(text,'myapp.hpp','plain/text');
+	var filename = (Options.namespace || 'myapp') + (Options.example ? '.cpp' : '.hpp');
+	writeFile(text, filename,'plain/text');
 }
 function ReadCpp(evt) {
 	if(! window.FileReader ) {
@@ -167,6 +169,8 @@ function ReadCpp(evt) {
 function OnChange() {
 	if( Delay ) clearTimeout(Delay);
 	Delay = setTimeout(Run, 300);
+	if( this.id === 'arduino' )
+		document.querySelectorAll('#avr').forEach((v)=>{ v.checked = this.checked });
 }
 function BindControl(c) {
 	c && (c.onchange = OnChange);
@@ -184,12 +188,12 @@ function GetOptionValue(id, field) {
 function SetOptions() {
 	['name', 'classname', 'namespace'].forEach((v)=>SetOptionValue(v, Options[v]));
 	document.querySelectorAll('input[name="variant"]').forEach((v)=>v.checked = v.value === Options.variant);
-	['example', 'compact','avr'].forEach((v)=>SetOptionValue(v, Options[v], 'checked'));
+	['example', 'compact','avr', 'arduino'].forEach((v)=>SetOptionValue(v, Options[v], 'checked'));
 }
 function GetOptions() {
 	['name', 'classname', 'namespace'].forEach((v)=>GetOptionValue(v));
 	document.querySelectorAll('input[name="variant"]').forEach((v)=>v.checked && (Options.variant = v.value));
-	['example', 'compact', 'avr'].forEach((v)=>GetOptionValue(v, 'checked'));
+	['example', 'compact', 'avr', 'arduino'].forEach((v)=>GetOptionValue(v, 'checked'));
 	localStorage.setItem('Options', JSON.stringify(Options));
 }
 function HashChanged() {

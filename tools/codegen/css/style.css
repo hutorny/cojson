@@ -230,6 +230,10 @@ input[hidden] {
 	font-weight: bold;
 }
 
+label#arduino-label {
+	width: 16em;
+}
+#arduino-checkbox,
 #avr-checkbox,
 #example-checkbox {
 	float: right;

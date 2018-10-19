@@ -23,9 +23,9 @@
 class CojsonGenerator {
 	constructor(options) {
 		this.options = Object.assign({}, this.constructor.Options, options);
-		this.textstyle = Object.assign({}, this.constructor.TextStyle, this.options.textstyle);		
+		this.textstyle = Object.assign({}, this.constructor.TextStyle, this.options.textstyle);
 		this.content = this.constructor.Content;
-		this.verbosity = this.options.compact ? 'compact' : 'verbose';		
+		this.verbosity = this.options.compact ? 'compact' : 'verbose';
 		this.keywords = this.constructor.Keywords;  // .concat(
 													// this.content[this.verbosity].keywords);
 		this.reserved = this.constructor.Reserved;
@@ -39,12 +39,12 @@ class CojsonGenerator {
 		this.suffixes = {};
 		this.input = null;
 		this.max_id_len = 32;
-		
+
 		this.ident = 0;
 		this.validex = /^[_a-zA-Z][_a-zA-Z0-9]{0,30}$/;
 		this.invalid = /[^_a-zA-Z0-9]/g;
 		this.builtin = /^__builtin_[_a-zA-Z0-9]*$/;
-		this.autocount = 0;		
+		this.autocount = 0;
 		if( ! this.options.min_strlen ) {
 			this.options.min_strlen = 1;
 		}
@@ -54,14 +54,17 @@ class CojsonGenerator {
 		var input, tail;
 		try {
 			input = JSON.parse(text);
-			this.add(this.content.intro, 
+			this.add(this.content.intro,
 				this.options.write_json  ? this.content.intro_json	+ text + '\n' : undefined,	//{1}
-				this.options.build_intro ? this.content.intro_build : undefined, //{2}
-				this.options.avr ? undefined : this.content.intro_build_shared, //{2}
-				this.options.build_intro &&  this.options.avr ? this.content.intro_build_avr : undefined, //{4} 
+				this.options.build_intro ? 
+					this.options.arduino ? this.content.intro_build_arduino :
+					this.content.intro_build : undefined, //{2}
+				this.options.avr || this.options.arduino ? undefined : this.content.intro_build_shared, //{3}
+				this.options.build_intro &&  this.options.avr && ! this.options.arduino ? 
+						this.content.intro_build_avr : undefined, //{4}
 				this.options.build_intro && this.options.variant === 'stdlib' && this.options.avr ?
-						this.content.intro_build_noavr : undefined //{5} 
-				); 
+						this.content.intro_build_noavr : undefined //{5}
+				);
 		} catch (e) {
 			if( this.options.throw_json_errors ) { throw e; }
 			if( this.options.write_json_errors )
@@ -70,24 +73,27 @@ class CojsonGenerator {
 		}
 		if( this.options.variant === 'stdlib' ) {
 			this.add(this.content.include_string);
-			this.add(this.content.include_vector);			
-		}		
-		this.add(this.content.include_cojson);
-		if( (this.options.variant === 'stdlib' || this.options.example) && ! this.options.avr )
-			this.add(this.content.include_stdlib);			
-		if( this.options.example && ! this.options.avr )
+			this.add(this.content.include_vector);
+		}
+		this.add(this.options.arduino ? this.content.include_cojson_h : this.content.include_cojson);
+		if( (this.options.variant === 'stdlib' || this.options.example) 
+				&& ! this.options.avr && ! this.options.arduino )
+			this.add(this.content.include_stdlib);
+		if( this.options.example && ! this.options.avr && ! this.options.arduino )
 			this.add(this.content.include_example);
 		if( this.options.namespace )
-			tail = this.add(this.content.namespace,this.options.namespace, '', ''); 
+			tail = this.add(this.content.namespace,this.options.namespace, '', '');
 		this.fromValue(input, this.topname(input));
 		this.close(tail);
 		if( this.options.example ) {
-			var example = this.constructor.Template[this.options.avr ? 'avrexample' : 'example'];
+			var example = this.constructor.Template[
+				this.options.arduino ? 'arduinoexample' :
+				this.options.avr ? 'avrexample' : 'example'];
 			this.add(this.content[this.verbosity].line);
-			example = this.state.objects || this.state.list || 
-				['variables','functions','stdvar'].includes(this.variant) 
-				? example.value : example.object		
-			this.add(example, 
+			example = this.state.objects || this.state.list ||
+				['variables','functions','stdvar'].includes(this.variant)
+				? example.value : example.object
+			this.add(example,
 				this.options.namespace, // {1}
 				this.state.cppname,		// {2}
 				this.state.classname, 	// {3}
@@ -97,7 +103,7 @@ class CojsonGenerator {
 	}
 	topname(input) {
 		switch( typeof input ) {
-		case typeof {}: 
+		case typeof {}:
 			if( Array.isArray(input) ) return 'data';
 			var name = (this.options.classname || 'object').toLowerCase();
 			return ( name === this.options.classname ) ? "_" + name : name;
@@ -105,23 +111,23 @@ class CojsonGenerator {
 		case typeof "  ":
 		case typeof 1234:
 			return 'data';
-		default:			
-			throw new Error(this.is_not_supported(typeof input)); 
-		}		  
+		default:
+			throw new Error(this.is_not_supported(typeof input));
+		}
 	}
 	fromValue(input, name) {
 		this.state = this.new_state(name);
 		var isplainval;
-		if( this.fill(this.state, input) )  
+		if( this.fill(this.state, input) )
 			this.parse(input, this.state.childs, this.state);
-		else 
+		else
 			isplainval = ! this.state.objects;
-		
+
 		if( this.prefix ) this.prefixes[this.variant] = this.prefix;
 		if( this.suffix ) this.suffixes[this.variant] = this.suffix;
-		if( this.struct && (isplainval || this.state.plain || this.state.empty ) ) {			
+		if( this.struct && (isplainval || this.state.plain || this.state.empty ) ) {
 			this.variant = this.content.downgrade[this.variant];
-			this.methods_downgraded = this.variant === 'functions' && this.options.variant === 'methods';  
+			this.methods_downgraded = this.variant === 'functions' && this.options.variant === 'methods';
 			//this.names.data = 'data';
 			this.struct = false;
 			if( this.variant !== 'stdvar' )
@@ -129,27 +135,27 @@ class CojsonGenerator {
 		}
 		this.declare_names();
 		this.declare(this.state, this.content.decl[this.variant==='methods'?'members':this.variant]);
-		this.add(this.content[this.verbosity].line);		
+		this.add(this.content[this.verbosity].line);
 		this.json(this.state, this.content[this.verbosity], 'root');
 		this.iterate(this.classes, (v)=> ! v.empty && this.json(v, this.content[this.verbosity], 'top'));
 		if( this.variant === 'functions' && this.options.example ) {
-			this.add(this.content[this.verbosity].line);		
+			this.add(this.content[this.verbosity].line);
 			this.declare(this.state, this.content.impl.decl);
 			this.functions(this.state, this.content.impl.functions);
 		}
 		if( this.variant === 'methods' ) {
-			var template = this.content.impl[this.state.list ? 'functions' : 'methods'];			
+			var template = this.content.impl[this.state.list ? 'functions' : 'methods'];
 			this.methods(this.state, template);
-			this.iterate(this.classes, (v)=> {				
-				this.methods(v, this.content.impl.methods);			
-			});			
-		} else { 
+			this.iterate(this.classes, (v)=> {
+				this.methods(v, this.content.impl.methods);
+			});
+		} else {
 			this.add(this.content[this.verbosity].line);
 			if( this.options.variant === 'methods' ) {
-				this.iterate(this.classes, (v)=> this.methods(v, this.content.impl.methods));					
+				this.iterate(this.classes, (v)=> this.methods(v, this.content.impl.methods));
 			}
 		}
-		
+
 	}
 	emtail(s) {
 		return s && (s[s.length-1] !== ' ') ? (s + ' ') : s;
@@ -187,13 +193,13 @@ class CojsonGenerator {
 	        tail && (tail = tail.replace(regexp, arguments[j] || ''));
 	    }
 	    head = head.split('\n');
-	    head.forEach((i)=>this.head.push(this.line(i)));	    
+	    head.forEach((i)=>this.head.push(this.line(i)));
 	    if( tail ) {
 	    	tail = tail.replace(/\t/gi,this.textstyle.ident);
 	    	tail = tail.replace(/\n/gi,'\n' + this.textstyle.ident.repeat(this.ident));
 	    	this.ident++;
 	    }
-	    return tail;	    
+	    return tail;
 	}
 	merge(state1, state2) {
 		if( !state1 || !state2 ) return state1 || state2;
@@ -213,11 +219,11 @@ class CojsonGenerator {
 			}
 			state2.item = types[0];
 		}
-		if( state1.size || state2.size ) state2.size = this.intmax(state2.size, state1.size); 
-		if( state1.len || state2.len ) state2.len = this.intmax(state2.len, state1.len); 
+		if( state1.size || state2.size ) state2.size = this.intmax(state2.size, state1.size);
+		if( state1.len || state2.len ) state2.len = this.intmax(state2.len, state1.len);
 		return state2;
 	}
-	
+
 	parse(input, childs, parent) {
 		if( input === null || typeof input === typeof undefined ) {
 			this.is_not_supported(input, parent && parent.jsonname );
@@ -246,22 +252,22 @@ class CojsonGenerator {
 			parent.empty = Object.keys(input).length === 0;
 			if( parent.empty ) parent.type = '{}';
 			Object.keys(input).forEach((key)=>{
-				var state = this.new_state(key, parent);			
+				var state = this.new_state(key, parent);
 				if( this.fill(state, input[key], parent) ) {
 					this.parse(input[key], state.childs, state);
 				}
 				childs[key] = this.merge(state, childs[key]);
 			});
-		}			
+		}
 	}
-	new_state(key, parent) {		
+	new_state(key, parent) {
 		var id = this.sanitize(key);
 		var name = id;
 		var jsonname = parent && parent.jsonname ? [parent.jsonname,key].join('.') : parent ? key : '';
 		if( this.names[id] && ! this.struct ) {
 			name = '"' + id + '"';
-			if( key !== id ) name += ' ("' + id + '")'; 
-			this.add(this.notes.name_collision ? 
+			if( key !== id ) name += ' ("' + id + '")';
+			this.add(this.notes.name_collision ?
 				this.content.message.name_collision : this.content.message.name_collision_new, name);
 			console.warn('WARN: Name collision for ' + name);
 			if( ! this.notes.name_collision && ! ['members','methods'].includes(this.options.variant) ) {
@@ -275,14 +281,14 @@ class CojsonGenerator {
 		var cppname = !parent || ! parent.objects ? name : '';
 		while( cppname && this.nameinuse(cppname,parent) ) cppname = this.autogen(name);
 		if( parent && parent.names ) parent.names.push(cppname);
-		return { 
-			name : id, 
-			src: key, 
-			cppname : cppname, 
+		return {
+			name : id,
+			src: key,
+			cppname : cppname,
 			parentclass : parent ? parent.classname : this.options.classname,
 			jsonname : jsonname,
-			root : ! parent 
-		};					
+			root : ! parent
+		};
 	}
 	reducetypes(types) {
 		if( types.includes('float') )
@@ -290,26 +296,26 @@ class CojsonGenerator {
 		if( types.includes('int') )
 			types = types.filter((t)=>!['uint'].includes(t));
 		return types;
-	}	
+	}
 	reduce(types) {
 		var keys = Object.keys(types);
-		if( keys.length < 2  ) return keys; 
+		if( keys.length < 2  ) return keys;
 		/* upgrading array item types uint -> int -> float */
 		return this.reducetypes(keys);
 	}
-	
+
 	strlen(str) {
 		return Math.max(str.length + this.options.strings_with_traling_0, this.options.min_strlen);
 	}
-	
+
 	isvector(input, state) {
-		const nonvectorizable = this.struct ? ['list', 'vector'] : ['list', 'vector', 'object'];			
+		const nonvectorizable = this.struct ? ['list', 'vector'] : ['list', 'vector', 'object'];
 		const nonmixeable     = ['bool', 'vector', 'list', 'string', 'strings', 'object'];
 		var types = {};
 		//state && (state.size = input.length );
 		state.size = Math.max(input.length, state.size | 0 );
 		switch( input.length ) {
-		case 0:			
+		case 0:
 			return 'list';
 		case 1:
 			state.item = this.typify(input[0], state);
@@ -321,16 +327,16 @@ class CojsonGenerator {
 			case 'object':
 				return 'objects';
 			}
-			return 'vector';			    
+			return 'vector';
 		default:
 			input.forEach((i)=>types[this.typify(i, state)]=true);
 			types = this.reduce(types);
 			switch(types.length) {
 			case 0: return false;
-			case 1: 
+			case 1:
 				state.item = types[0];
 				if( nonvectorizable.includes(state.item) )
-					return 'list';				
+					return 'list';
 				if( state.item === 'string' ) {
 					var len = 0;
 					input.forEach((i)=>len<i.length && (len = this.strlen(i)));
@@ -340,14 +346,14 @@ class CojsonGenerator {
 				return state.item === 'object' ? 'objects' : 'vector';
 			default:
 				state.plain = ! types.includes('object');
-				if( types.some((i)=>nonmixeable.includes(i)) ) {					
-					return 'list';				
+				if( types.some((i)=>nonmixeable.includes(i)) ) {
+					return 'list';
 				}
 				state.item = types[0];
 				return 'vector';
 			}
 		}
-	}	
+	}
 	typify(input, state) {
 		if( input === null) {
 			this.add(this.content.message.null_replaced, state.jsonname);
@@ -362,8 +368,8 @@ class CojsonGenerator {
 		case typeof "  ":
 			return 'string';
 		case typeof {  }:
-			if( Array.isArray(input) ) {				
-				return this.isvector(input, state); 				
+			if( Array.isArray(input) ) {
+				return this.isvector(input, state); 
 			} else {
 				return 'object';
 			}
@@ -373,7 +379,7 @@ class CojsonGenerator {
 		if( name ) {
 			this.add(this.content.message.not_supported2, name, JSON.stringify(input));
 		} else {
-			this.add(this.content.message.not_supported, JSON.stringify(input)); 
+			this.add(this.content.message.not_supported, JSON.stringify(input));
 		}
 		console.warn('WARN: Unsupported data type: ' , input);
 		return this.content.message.not_supported;
@@ -381,60 +387,60 @@ class CojsonGenerator {
 	isembedded(type) {
 		const collections = [/* 'list', */ 'strings', 'vector', 'objects'];
 		return collections.includes(type);
-	}	
+	}
 	classname(state, parent) {
 		const scalars = ['bool', 'float', 'uint', 'int', 'string' /* , 'list' */];
 
 		if( ! this.struct ) return '';
-		
+
 		var scalar = scalars.includes(state.type);
-		
-		if( ! parent ) {			
-			return state.type === 'list' ? '' : 
+
+		if( ! parent ) {
+			return state.type === 'list' ? '' :
 				scalar ? this.typename(state.cppname) : this.options.classname;
 		}
 		if( state.type === 'vector' && parent.list )
 			return parent.classname;
-		
-		var embedded = this.isembedded(parent.type);  		
-		return (scalar || embedded || state.type === 'list' ) ? 
-				  parent.classname 
+
+		var embedded = this.isembedded(parent.type);  
+		return (scalar || embedded || state.type === 'list' ) ?
+				  parent.classname
 				: this.typename(state.cppname, parent);
 	}
-	fullclass(state, parent) {		
-		if( ! parent ) 
-			return state.classname;		
+	fullclass(state, parent) {
+		if( ! parent )
+			return state.classname;
 		if( (parent.objects && parent.root) || state.type !== 'object' ) {
-			return parent.fullclass || parent.classname; 
+			return parent.fullclass || parent.classname;
 		}
-		return parent.fullclass ? 
+		return parent.fullclass ?
 			  [parent.fullclass, state.classname].join('::')
 			: state.classname;
 	}
 	intmax(a, b) {
-		return Math.max(a|0, b|0); 
+		return Math.max(a|0, b|0);
 	}
 	fill(state, input, parent) {
 		state.type = this.typify(input, state);
-							
+
 		state.classname = this.classname(state, parent);
 		state.fullclass = this.fullclass(state, parent);
-		
+
 		if(parent && this.isembedded(parent.type) ) {
 			state.name = parent.name;
 		}
 		state.fullname  = parent && parent.fullclass ? [parent.fullclass, state.name].join('::') : state.name;
 
 		if( parent && parent.list )
-			state.name = parent.name; 
-		
+			state.name = parent.name;
+
 		switch( state.type ) {
 		case 'string':
 			if( input === null ) input = '';
 			state.size = this.intmax(this.strlen(input), state.size);
 			return false;
 		case 'strings':
-			return false;			
+			return false;
 		case 'object':
 			if(! state.childs )
 				state.childs = Object.create(null);
@@ -456,14 +462,14 @@ class CojsonGenerator {
 			if(! state.childs )
 				state.childs = [];
 			if(! state.names )
-				state.names = (parent && parent.names) || [];			
+				state.names = (parent && parent.names) || [];
 			return true;
 		default:
-			return false;				
-		}		
+			return false;
+		}
 	}
 	addstate(templ, v, dlm, sep) {
-		return this.add(templ, 			
+		return this.add(templ, 
 			this.options.name, 								// {1}
 			this.content.type[v.type],						// {2}
 			v.name,											// {3}
@@ -497,7 +503,7 @@ class CojsonGenerator {
 			this.add(template.using_cojson);
 			tails.unshift(this.add(template.return_));
 			tails.unshift(this.addstate((impl.top && impl.top[state.type]) || impl.value[state.type], state, '', (state.empty ? '' : ',')));
-		} 
+		}
 		var inst = (state.type === 'object') ? impl.member : impl.value;
 		if( ! state.objects  )
 			this.iterate(state.childs, (v, i, a, last) => {
@@ -513,25 +519,25 @@ class CojsonGenerator {
 	}
 	upgrade(top) {
 		const map = { variables: 'members', functions: 'methods', stdvar: 'stdlib' };
-		return (top && map[this.variant]) || this.variant;  
+		return (top && map[this.variant]) || this.variant;
 	}
-	
+
 	derivatives(cppname) {
-		return [cppname + '_get', cppname + '_set', cppname + '_ptr', cppname + '_array'];		
+		return [cppname + '_get', cppname + '_set', cppname + '_ptr', cppname + '_array'];
 	}
 	nameinuse(cppname, parent) {
-		var inuse = parent && (parent.classname === cppname || parent.names && parent.names.includes(cppname));		
+		var inuse = parent && (parent.classname === cppname || parent.names && parent.names.includes(cppname));
 		if( inuse || ! (parent && parent.childs) ) {
 			return inuse;
 		}
-		this.iterate(parent.childs, (v)=>inuse = inuse || 
-				v.classname === cppname || 
+		this.iterate(parent.childs, (v)=>inuse = inuse ||
+				v.classname === cppname ||
 				v.cppname === cppname ||
 				(parent.list && this.nameinuse(cppname, v)) ||
-				(this.options.example && this.options.variant === 'functions' && 
+				(this.options.example && this.options.variant === 'functions' &&
 				 this.derivatives(v.cppname).includes(cppname)) );
 		return inuse;
-	}	
+	}
 	typename(name, parent) {
 		var type, alias = name.replace(/^[_0-9]*\w/,(c)=>c.toUpperCase());
 		type = name === alias ? this.autogen(alias) : alias;
@@ -542,29 +548,30 @@ class CojsonGenerator {
 	}
 	declare_names() {
 		if( Object.keys(this.names).length === 0 ) return;
-		var tail = this.add(this.content.namespace, this.options.name, 
-				   this.options.avr ? this.content[this.verbosity].avrdefine : undefined, 
-				   this.options.avr ? this.content[this.verbosity].avrundef : undefined);
+		var tail = this.add(this.content.namespace, this.options.name,
+				   this.options.avr || this.options.arduino ? this.content.compact.avrdefine : undefined,
+				   this.options.avr || this.options.arduino ? this.content.compact.avrundef : undefined);
 			Object.keys(this.names).forEach((key)=>{
 				if( this.names[key].length > this.max_id_len ) {
 					console.warn('WARN: Name "' + this.names[key] + '" exceeds default maximal identifier length of ' + this.max_id_len);
 					if( ! this.warn_name_too_long ) {
-						this.warn_name_too_long = true;						
+						this.warn_name_too_long = true;
 						console.info('INFO: Adjust configuration value max_key_length');
 					}
-				}					
-				this.close(this.add(this.options.avr ? this.content[this.verbosity].progmem : this.content.decl.name, 
+				}
+				this.close(this.add(this.options.avr || this.options.arduino ? 
+					this.content.compact.progmem : this.content.decl.name,
 					key, this.escape(this.names[key]),
 					(this.names[key].length > this.max_id_len ? this.content.message.name_too_long : '')
 				));
-			});		
+			});
 		this.close(tail);
 	}
-			
+
 	declare(state, template, parent) {
 		var tails = [];
 		if( this.methods_downgraded && state.objects ) {
-			if( template === this.content.impl.decl ) return;			
+			if( template === this.content.impl.decl ) return;
 			if( template === this.content.decl.functions ) {
 				template = this.content.decl.members;
 			}
@@ -631,7 +638,7 @@ class CojsonGenerator {
 			if ( this.keywords.includes(name) || name.match(this.builtin) )
 				name = name.replace(/^[_0-9]*\w/,(c)=>(/[a-z]/.test(c) ? c.toUpperCase() : c));
 			if( this.keywords.includes(name) )
-				name = name.replace(/^\w/,(c)=>(c==='_'? 'v': 'v'+c));				
+				name = name.replace(/^\w/,(c)=>(c==='_'? 'v': 'v'+c));
 		}
 		var valid = name.replace(this.invalid, '_');
 		if( ! valid.charAt(0).match(/[_a-zA-Z]/) ) valid = '_' + valid;
@@ -639,13 +646,13 @@ class CojsonGenerator {
 		if( this.names[valid] && this.names[valid] !== name ) {
 			valid = this.surrogate(name, valid);
 		}
-		return valid; 
+		return valid;
 	}
 	iterate(src, func) { /* function(element, key/index, src, last) */
 		if( !src ) return;
 		if( Array.isArray(src) )
 			src.forEach((v,i,a)=>func(v,i,a,i===a.length-1));
-		else 
+		else
 			Object.keys(src).forEach((v,i,a)=>func(src[v], v, src, i===a.length-1));
 	}
 	surrogate(name, valid) {
@@ -671,17 +678,17 @@ class CojsonGenerator {
 	}
 	close(tail) {
 		if( typeof tail === typeof [] ) {
-			for(var i in tail) if(tail[i]) this.close(tail[i]);			
+			for(var i in tail) if(tail[i]) this.close(tail[i]);
 		} else if( typeof tail === typeof '' ) {
-			this.head[this.head.length-1] = this.head[this.head.length-1] + tail; 
-		    this.ident--;		
+			this.head[this.head.length-1] = this.head[this.head.length-1] + tail;
+		    this.ident--;
 		}
 	    if( this.ident < 0 ) {
 	    	if( this.failed_ident )
 	    		console.info("INFO: failed to make proper indentation");
 	    	this.failed_ident = true;
 	    	this.ident = 0;
-	    }		
+	    }
 	}
 }
 
@@ -704,14 +711,14 @@ CojsonGenerator.Template = {
 		vector	 : '{-4}{5} {7}[{4}]{-3};',
 		object	: `
 struct {8} {{|}
-public:	
+public:
 	static const cojson::details::clas<{8}>& json() noexcept;
     inline bool json(cojson::details::lexer& in) noexcept {
     	return json().read(*this, in);
     }
     inline bool json(cojson::details::ostream& out) const noexcept {
     	return json().write(*this, out);
-    }	
+    }
 } {7}{-7};`
 	},
 	impl : {
@@ -728,7 +735,7 @@ void {7}_set({2} _{7}) noexcept {
 }
 void {10}::{7}_set({2} _{7}) noexcept {
 	{7} = _{7};
-}`  
+}`
 	},
 	verbose : {
 		value:		'ValuePointer<decltype({7}), &{7}>{-1}',
@@ -737,7 +744,7 @@ void {10}::{7}_set({2} _{7}) noexcept {
 		getters:	'MemberValue<{1}::{3}, ValueGetterSetter<std::result_of<decltype({7}_get)&()>::type, &{7}_get, &{7}_set>>{-1}',
 		property:	'PropertyScalarMember<{8}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 		methods:	'PropertyScalarAccessor<{8}, {1}::{3}, accessor::methods<\n\t{8}, decltype({8}::{7}), &{8}::{7}_get, &{8}::{7}_set>>{-1}'
-	},		
+	},
 	compact : {
 		value:		'V<{2}, &{7}>{-1}',
 		member:		'M<{1}::{3}, {2}, &{7}>{-1}',
@@ -765,19 +772,62 @@ int main(int, char**) {
 	{4}
 	return 0;
 }`},
+	arduinoexample : {
+		value : `
+void setup() {
+	Serial.begin(9600);
+	while (!Serial) {};
+}
+
+void loop() {
+	cojson::wrapper::iostream<decltype(Serial)> serialio(Serial);
+    serialio.echo(true);
+	if( Serial.available() ) {
+		{1}::json().read(serialio);
+		Serial.println();
+		if( + serialio.error() ) {
+			Serial.println("JSON error");
+			serialio.clear();
+			while( Serial.available() ) Serial.read();
+		}
+		{1}::json().write(serialio);
+		Serial.println();
+	}
+}`,
+		object : `
+void setup() {
+	Serial.begin(9600);
+	while (!Serial) {};
+}
+
+void loop() {
+	cojson::wrapper::iostream<decltype(Serial)> serialio(Serial);
+    serialio.echo(true);
+	if( Serial.available() ) {
+		{1}::{2}.json(serialio.in());
+		Serial.println();
+		if( + serialio.error() ) {
+			Serial.println("JSON error");
+			serialio.clear();
+			while( Serial.available() ) Serial.read();
+		}
+		{1}::{2}.json(serialio.out());
+		Serial.println();
+	}
+}`	},
 	avrexample : {
-	value : `int main() {
+		value : `int main() {
 	static volatile char buffer[256];
-	cojson::wrappers::memstream stream(buffer);
+	cojson::wrapper::memstream stream(buffer);
 	cojson::lexer input(stream);
 	{1}::json().read(input);
 	{1}::json().write(stream);
 	{4}
 	return 0;
 }`,
-	object : `int main() {
+		object : `int main() {
 	static volatile char buffer[256];
-	cojson::wrappers::memstream stream(buffer);
+	cojson::wrapper::memstream stream(buffer);
 	cojson::lexer input(stream);
 	{1}::{2}.json(input);
 	{1}::{2}.json(stream);
@@ -791,26 +841,31 @@ CojsonGenerator.Variants = ['variables','functions','members','methods', 'stdlib
 CojsonGenerator.Content = {
 	intro : `/*
  * This file is generated with COJSON Code Generator
- * You can redistribute it and/or modify it under the terms of the 
+ * You can redistribute it and/or modify it under the terms of the
  * GNU General Public License v2
- * 
+ *
 {1}{2}{3}{4}{5}
  */`,
 	intro_json : ` * Using the following input JSON\n`,
-	intro_build: ` * Build your application with this file and the following sources: 
- *     cojson/src/cojson.cpp 
+	intro_build: ` * Build your application with this file and the following sources:
+ *     cojson/src/cojson.cpp
  *     cojson/src/cojson_libdep.cpp`,
  	intro_build_shared: `
  *     cojson/src/platforms/shared/chartypetable.cpp`,
+	intro_build_arduino: ` * Build your application with cojson library
+ *
+ * ¹ Note: You may install cojson library in your Arduino Studio using this zip:
+ *         https://github.com/hutorny/cojson.lib/archive/master.zip`,
  	intro_build_avr: `
  *     cojson/src/platforms/avr/*.cpp
- *         
- * ¹ Note: for AVR follow build instructions given in 
- *     http://hutorny.in.ua/projects/cojson/cojson-tutorial#build`,		
+ *
+ * ¹ Note: for AVR builds without Arduino follow build instructions given in
+ *     http://hutorny.in.ua/projects/cojson/cojson-tutorial#build`,
  	intro_build_noavr: `
- *         
- * ² Note: GCC AVR has no support for C++ stdlib`,		
+ *
+ * ² Note: GCC AVR has no support for C++ stdlib`,
 	include_cojson : '#include <cojson.hpp>',
+	include_cojson_h : '#include <cojson.h>\n#include <Arduino.h>',
 	include_vector : '#include <vector>',
 	include_string : '#include <string>',
 	include_stdlib : '#include <cojson_stdlib.hpp>',
@@ -818,10 +873,10 @@ CojsonGenerator.Content = {
 	namespace : 'namespace {1} {{2}{|}{3}\n}',
 	struct : 'struct {1} {\n{|}}',
 	debug : '/*\n 0:{-1}\n 1:{1}\n 2:{2}\n 3:{3}\n 4:{4}\n 5:{5}\n 6:{6}\n 7:{7}\n 8:{8}\n 9:{9}\n10:{10}\n11:{11}\n */',
-	type : { 
-		bool	: 'bool', 
-		float	: 'double', 
-		int		: 'int', 
+	type : {
+		bool	: 'bool',
+		float	: 'double',
+		int		: 'int',
 		uint	: 'unsigned',
 		string	: 'char',
 		vector	: 'vector',
@@ -829,7 +884,7 @@ CojsonGenerator.Content = {
 		list	: 'list',
 		object	: 'object',
 		objects	: 'object[]'
-	},	
+	},
 	downgrade : {
 		variables : 'variables',
 		functions : 'functions',
@@ -837,8 +892,8 @@ CojsonGenerator.Content = {
 		methods   : 'functions',
 		stdlib    : 'stdvar'
 	},
-	decl : {		
-		variables : {			
+	decl : {
+		variables : {
 			bool	: CojsonGenerator.Template.decl.variables,
 			float	: CojsonGenerator.Template.decl.variables,
 			uint	: CojsonGenerator.Template.decl.variables,
@@ -886,7 +941,7 @@ CojsonGenerator.Content = {
 			uint	: CojsonGenerator.Template.decl.methods,
 			int		: CojsonGenerator.Template.decl.methods,
 			objects	: '{-8}{8} {7}[{4}]{-7};'
-		},		
+		},
 		stdlib : {
 			bool	: CojsonGenerator.Template.decl.members,
 			float	: CojsonGenerator.Template.decl.members,
@@ -899,7 +954,7 @@ CojsonGenerator.Content = {
 			object	: CojsonGenerator.Template.decl.object,
 			objects	: '{-8}std::vector<{8}> {7}{-7};'
 		},
-		stdvar : {			
+		stdvar : {
 			bool	: CojsonGenerator.Template.decl.variables,
 			float	: CojsonGenerator.Template.decl.variables,
 			uint	: CojsonGenerator.Template.decl.variables,
@@ -913,8 +968,8 @@ CojsonGenerator.Content = {
 		},
 		name    : 'inline constexpr const char* {1}() noexcept { return "{2}"; {3}}',
 	},
-	impl : {		
-		decl : {			
+	impl : {
+		decl : {
 			bool	: CojsonGenerator.Template.decl.variables,
 			float	: CojsonGenerator.Template.decl.variables,
 			uint	: CojsonGenerator.Template.decl.variables,
@@ -942,10 +997,11 @@ CojsonGenerator.Content = {
 		using_cojson: 'using namespace cojson;\nusing namespace cojson::accessor;\n',
 		return_	: 'return {|}();',
 		progmem : 'CSTRING_NAME({1},"{2}") {3}',
-		avrdefine : `\r#define CSTRING_NAME(a,b) inline cojson::cstring a() noexcept {\\
+		avrdefine : `\r#	ifdef __AVR__\r#		define CSTRING_NAME(a,b) inline cojson::cstring a() noexcept {\\
 			static const char l[] __attribute__((progmem))= b;\\
-			return cojson::cstring(l);\\\n\t\t}`,
-		avrundef : '\r#undef CSTRING_NAME',
+			return cojson::cstring(l);\\\n\t\t}\r#	else\r#		define CSTRING_NAME(a,b) inline cojson::cstring a() noexcept {\\
+				return b; }\r#	endif`,
+		avrundef : '\r#	undef CSTRING_NAME',
 		variables : {
 			json : '\nconst cojson::details::value& json() noexcept {{|}\n}',
 			top	: {
@@ -962,12 +1018,12 @@ CojsonGenerator.Content = {
 				string	: 'V<{4}, {7}>{-1}',
 				strings	: 'V<{4}, {6}, {7}>{-1}',
 				vector	: 'V<{5}, {4}, {7}>{-1}',
-				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}', 
-				objects : 'V<array<{8}, {4}, {7}>, &{8}::json>{-1}', 
+				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}',
+				objects : 'V<array<{8}, {4}, {7}>, &{8}::json>{-1}',
 				plain	: 'V<{|}\n>{-1}',
-				list	: 'V<{|}\n>{-1}',		
+				list	: 'V<{|}\n>{-1}',
 				"{}"	: 'details::ValueObject<>{-1}',
-				"[]"	: 'V<>{-1}'		
+				"[]"	: 'V<>{-1}'
 			},
 			member : {
 				bool	: CojsonGenerator.Template.compact.member,
@@ -978,11 +1034,11 @@ CojsonGenerator.Content = {
 				strings	: 'M<{1}::{3}, V<{4}, {6}, {7}>>{-1}',
 				vector	: 'M<{1}::{3}, V<{5}, {4}, {7}>>{-1}',
 				object	: 'M<{1}::{3}, V<pointer<{5}, &{7}>, &{8}::json>>{-1}',
-				objects	: 'M<{1}::{3}, V<array<{8},{4}, {7}>, &{8}::json>{-1}', 
+				objects	: 'M<{1}::{3}, V<array<{8},{4}, {7}>, &{8}::json>{-1}',
 				plain	: 'M<{1}::{3}, V<{|}>\n>{-1}',
 				list	: 'M<{1}::{3}, V<{|}\n>>{-1}',
 				"{}"	: 'M<{1}::{3}, details::ValueObject<>\n>{-1}',
-				"[]"	: 'M<{1}::{3}, V<>>{-1}'		
+				"[]"	: 'M<{1}::{3}, V<>>{-1}'
 			}
 		},
 		list : {
@@ -999,11 +1055,11 @@ CojsonGenerator.Content = {
 				uint	: CojsonGenerator.Template.compact.value,
 				int		: CojsonGenerator.Template.compact.value,
 				string	: 'V<{4}, {7}>{-1}',
-				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}', 
-				objects : 'V<array<{8}, {4}, {7}>, &{8}::json>{-1}', 
-				list	: 'V<{|}\n>{-1}',		
+				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}',
+				objects : 'V<array<{8}, {4}, {7}>, &{8}::json>{-1}',
+				list	: 'V<{|}\n>{-1}',
 				"{}"	: 'details::ValueObject<>{-1}',
-				"[]"	: 'V<>{-1}'				
+				"[]"	: 'V<>{-1}'
 			},
 			member : {
 				bool	: CojsonGenerator.Template.compact.member,
@@ -1023,7 +1079,7 @@ CojsonGenerator.Content = {
 			json : '\nconst cojson::details::clas<{10}>& {10}::json() noexcept {{|}\n}',
 			top	: {
 				object: 'O<{8}{-2}{|}\n>',
-				objects: 'V<array<{8}, {4}, {7}>, &{8}::json>', 
+				objects: 'V<array<{8}, {4}, {7}>, &{8}::json>',
 				"{}":   'details::ValueObject<>',
 				"[]":   'V<>'
 			},
@@ -1032,7 +1088,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.property,
 				uint	: CojsonGenerator.Template.compact.property,
 				int		: CojsonGenerator.Template.compact.property,
-				string	: 'P<{11}, {1}::{3}, {4}, &{8}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, {4}, &{8}::{7}>{-1}',
 				strings	: 'P<{11}, {1}::{3}, {4}, {6}, &{11}::{7}>{-1}',
 				vector	: 'P<{11}, {1}::{3}, {5}, {4}, &{8}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
@@ -1046,7 +1102,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.property,
 				uint	: CojsonGenerator.Template.compact.property,
 				int		: CojsonGenerator.Template.compact.property,
-				string	: 'P<{11}, {1}::{3}, {4}, &{11}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, {4}, &{11}::{7}>{-1}',
 				strings	: 'P<{11}, {1}::{3}, {4}, {6}, &{11}::{7}>{-1}',
 				vector	: 'P<{11}, {1}::{3}, {5}, {4}, &{11}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
@@ -1072,12 +1128,12 @@ CojsonGenerator.Content = {
 				string	: 'V<{4}, {7}>{-1}',
 				strings	: 'V<{4}, {6}, {7}>{-1}',
 				vector	: 'V<vector<{5}, &{7}_array>>{-1}',
-				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}', 
-				objects : 'V<array<{8}, {4},{7}>, &{8}::json>{-1}', 
+				object  : 'V<pointer<{8}, &{7}>, &{8}::json>{-1}',
+				objects : 'V<array<{8}, {4},{7}>, &{8}::json>{-1}',
 				plain	: 'V<{|}\n>{-1}',
 				list	: 'V<{|}\n>{-1}',
 				"{}"	: 'details::ValueObject<>{-1}',
-				"[]"	: 'V<>{-1}'					
+				"[]"	: 'V<>{-1}'
 			},
 			member : {
 				bool	: CojsonGenerator.Template.compact.getters,
@@ -1088,18 +1144,18 @@ CojsonGenerator.Content = {
 				strings	: 'M<{1}::{3}, V<{4}, {6}, {7}>>{-1}',
 				vector	: 'M<{1}::{3}, V<vector<{5}, &{7}_array>>>{-1}',
 				object	: 'M<{1}::{3}, V<pointer<{8}, &{7}>, &{8}::json>>{-1}',
-				objects	: 'M<{1}::{3}, V<array<{8}, {4}, {7}>, &{8}::json>{-1}', 
+				objects	: 'M<{1}::{3}, V<array<{8}, {4}, {7}>, &{8}::json>{-1}',
 				plain	: 'M<{1}::{3}, V<{|}>\n>{-1}',
 				list	: 'M<{1}::{3}, V<{|}\n>>{-1}',
 				"{}"	: 'M<{1}::{3}, details::ValueObject<>>{-1}',
-				"[]"	: 'M<{1}::{3}, V<>>{-1}'	
+				"[]"	: 'M<{1}::{3}, V<>>{-1}'
 			}
 		},
 		methods : {
 			json : '\nconst cojson::details::clas<{10}>& {10}::json() noexcept {{|}\n}',
 			top	: {
 				object: 'O<{8}{-2}{|}\n>',
-				objects: 'V<array<{8}, {4} ,{7}>, &{8}::json>', 
+				objects: 'V<array<{8}, {4} ,{7}>, &{8}::json>',
 				"{}":   'details::ValueObject<>',
 				"[]":   'V<>'
 			},
@@ -1108,7 +1164,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.methods,
 				uint	: CojsonGenerator.Template.compact.methods,
 				int		: CojsonGenerator.Template.compact.methods,
-				string	: 'P<{11}, {1}::{3}, {4}, &{8}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, {4}, &{8}::{7}>{-1}',
 				strings	: 'P<{11}, {1}::{3}, {4}, {6}, &{11}::{7}>{-1}',
 				vector	: 'P<{11}, {1}::{3}, {5}, {4}, &{8}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
@@ -1122,7 +1178,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.methods,
 				uint	: CojsonGenerator.Template.compact.methods,
 				int		: CojsonGenerator.Template.compact.methods,
-				string	: 'P<{11}, {1}::{3}, {4}, &{11}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, {4}, &{11}::{7}>{-1}',
 				strings	: 'P<{11}, {1}::{3}, {4}, {6}, &{11}::{7}>{-1}',
 				vector	: 'P<{11}, {1}::{3}, {5}, {4}, &{11}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
@@ -1136,7 +1192,7 @@ CojsonGenerator.Content = {
 			json : '\nconst cojson::details::clas<{10}>& {10}::json() noexcept {{|}\n}',
 			top	: {
 				object: 'O<{8}{-2}{|}\n>',
-				objects: 'V<stdvector<decltype({7}), &{7}>, &{8}::json>', 
+				objects: 'V<stdvector<decltype({7}), &{7}>, &{8}::json>',
 				"{}":   'details::ValueObject<>',
 				"[]":   'V<>'
 			},
@@ -1145,7 +1201,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.property,
 				uint	: CojsonGenerator.Template.compact.property,
 				int		: CojsonGenerator.Template.compact.property,
-				string	: 'P<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				strings	: 'V<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				vector	: 'V<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
@@ -1159,11 +1215,11 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.compact.property,
 				uint	: CojsonGenerator.Template.compact.property,
 				int		: CojsonGenerator.Template.compact.property,
-				string	: 'P<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}', 
+				string	: 'P<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				strings	: 'V<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				vector	: 'V<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				object	: 'P<{11}, {1}::{3}, {8}, &{11}::{7}, {8}::json>{-1}',
-				objects	: 'P<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, {8}::json>{-1}', 
+				objects	: 'P<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, {8}::json>{-1}',
 				list	: 'P<{11}, {1}::{3}{-2}{|}\n>{-1}',
 				"{}"	: 'P<{11}, {1}::{3}, details::ValueObject<>>{-1}',
 				"[]"	: 'P<{11}, {1}::{3}, V<>>{-1}'
@@ -1175,7 +1231,7 @@ CojsonGenerator.Content = {
 				list:   'V<{|}\n>',
 				object: 'V<{|}\n>',
 				"{}":   'details::ValueObject<>',
-				"[]":   'V<>'				
+				"[]":   'V<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.compact.value,
@@ -1185,12 +1241,12 @@ CojsonGenerator.Content = {
 				string	: 'S<decltype({7}), &{7}>{-1}',
 				strings	: 'V<decltype({7}), &{7}>{-1}',
 				vector	: 'V<{5}, &{7}>{-1}',
-				object  : 'V<pointer<{8}, &{7}>, {8}::json>{-1}', 
-				objects : 'V<stdvector<decltype({7}),&{7}>, {8}::json>{-1}', 
+				object  : 'V<pointer<{8}, &{7}>, {8}::json>{-1}',
+				objects : 'V<stdvector<decltype({7}),&{7}>, {8}::json>{-1}',
 				list	: 'V<{|}\n>{-1}',
 				"{}"	: 'details::ValueObject<>{-1}',
 				"[]"	: 'V<>{-1}'
-				
+
 			},
 			member : {
 				bool	: CojsonGenerator.Template.compact.member,
@@ -1214,7 +1270,7 @@ CojsonGenerator.Content = {
 				strings: 'details::ValueStdVector<decltype({7}), &{7}>',
 				objects: 'V<stdvector<decltype({7}), &{7}>,\n\t&{8}::json>',
 				"{}":   'details::ValueObject<>',
-				"[]":   'V<>'				
+				"[]":   'V<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.compact.value,
@@ -1224,11 +1280,11 @@ CojsonGenerator.Content = {
 				string	: 'S<decltype({7}), &{7}>{-1}',
 				strings	: 'V<decltype({7}), &{7}, void>{-1}',
 				vector	: 'V<decltype({7}), &{7}, void>{-1}',
-				object  : 'V<{|}>{-1}', 
-				objects : 'V<stdvector<decltype({7}),&{7}>, {8}::json>{-1}', 
+				object  : 'V<{|}>{-1}',
+				objects : 'V<stdvector<decltype({7}),&{7}>, {8}::json>{-1}',
 				list	: 'V<{|}\n>{-1}',
 				"{}"	: 'details::ValueObject<>{-1}',
-				"[]"	: 'V<>{-1}'				
+				"[]"	: 'V<>{-1}'
 			},
 			member : {
 				bool	: CojsonGenerator.Template.compact.member,
@@ -1243,10 +1299,10 @@ CojsonGenerator.Content = {
 				list	: 'M<{1}::{3}, V<{|}\n>>{-1}',
 				"{}"	: 'M<{1}::{3}, details::ValueObject<>>{-1}',
 				"[]"	: 'M<{1}::{3}, V<>>{-1}'
-			}			
+			}
 		},
 		line :'\n/**************************************************************************/'
-	},	
+	},
 	verbose : {
 		using_cojson: 'using namespace cojson;\nusing namespace cojson::details;',
 		return_	: 'return {|}();',
@@ -1257,7 +1313,7 @@ CojsonGenerator.Content = {
 				list:   'ValueArray<{|}\n>',
 				object: 'ValueObject<{|}\n>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'				
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.value,
@@ -1267,10 +1323,10 @@ CojsonGenerator.Content = {
 				string	: 'ValueString<std::extent<decltype({7}),0>::value, {7}>{-1}',
 				strings	: 'ValueStrings<std::extent<decltype({7}),0>::value,std::extent<decltype({7}),1>::value,{7}>{-1}',
 				vector	: 'ValueVector<{5}, std::extent<decltype({7}),0>::value, {7}>{-1}',
-				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}', 
+				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}',
 				objects : 'ValueObjectAccessor<cojson::accessor::array<\n' +
 			  		'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
-			  		'\t&{8}::json>{-1}', 
+			  		'\t&{8}::json>{-1}',
 				plain	: 'ValueObject<{|}\n>{-1}',
 				list	: 'ValueArray<{|}\n>{-1}',
 				"{}"	: 'ValueObject<>{-1}',
@@ -1287,7 +1343,7 @@ CojsonGenerator.Content = {
 				object	: 'MemberValue<{1}::{3}, ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>>{-1}',
 				objects	: 'MemberValue<{1}::{3}, ValueObjectAccessor<cojson::accessor::array<\n' +
 			  		'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
-			  		'\t&{8}::json>{-1}', 
+			  		'\t&{8}::json>{-1}',
 				plain	: 'MemberValue<{1}::{3}, ValueObject<{|}>\n>{-1}',
 				list	: 'MemberValue<{1}::{3}, ValueArray<{|}>\n>{-1}',
 				"{}"	: 'MemberValue<{1}::{3}, ValueObject<>>{-1}',
@@ -1300,7 +1356,7 @@ CojsonGenerator.Content = {
 				list:   'ValueArray<{|}\n>',
 				object: 'ValueObject<{|}\n>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'	
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.value,
@@ -1308,13 +1364,13 @@ CojsonGenerator.Content = {
 				uint	: CojsonGenerator.Template.verbose.value,
 				int		: CojsonGenerator.Template.verbose.value,
 				string	: 'ValueString<std::extent<decltype({7}),0>::value, {7}>{-1}',
-				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}', 
+				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}',
 				objects : 'ValueObjectAccessor<cojson::accessor::array<\n' +
 			  	'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
-				'\t&{8}::json>{-1}', 
+				'\t&{8}::json>{-1}',
 				list	: 'ValueArray<{|}\n>{-1}',
 				"{}"	: 'ValueObject<>{-1}',
-				"[]"	: 'ValueArray<>{-1}'				
+				"[]"	: 'ValueArray<>{-1}'
 			},
 			member : {
 				bool	: CojsonGenerator.Template.verbose.member,
@@ -1338,14 +1394,14 @@ CojsonGenerator.Content = {
 				  	'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
 					'\t&{8}::json>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'	 
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.property,
 				float	: CojsonGenerator.Template.verbose.property,
 				uint	: CojsonGenerator.Template.verbose.property,
 				int		: CojsonGenerator.Template.verbose.property,
-				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({8}::{7}),0>::value, &{8}::{7}>{-1}', 
+				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({8}::{7}),0>::value, &{8}::{7}>{-1}',
 				strings	: 'PropertyStrings<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, std::extent<decltype({11}::{7}),1>::value, &{11}::{7}>{-1}',
 				vector	: 'PropertyVector<{11}, {1}::{3}, std::remove_all_extents<decltype({8}::{7})>::type, std::extent<decltype({8}::{7})>::value, &{8}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
@@ -1361,7 +1417,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.verbose.property,
 				uint	: CojsonGenerator.Template.verbose.property,
 				int		: CojsonGenerator.Template.verbose.property,
-				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, &{11}::{7}>{-1}', 
+				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, &{11}::{7}>{-1}',
 				strings	: 'PropertyStrings<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, std::extent<decltype({11}::{7}),1>::value, &{11}::{7}>{-1}',
 				vector	: 'PropertyVector<{11}, {1}::{3}, std::remove_all_extents<decltype({11}::{7})>::type, std::extent<decltype({11}::{7})>::value, &{11}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
@@ -1389,10 +1445,10 @@ CojsonGenerator.Content = {
 				string	: 'ValueString<std::extent<decltype({7}),0>::value, {7}>{-1}',
 				strings	: 'ValueStrings<std::extent<decltype({7}),0>::value,std::extent<decltype({7}),1>::value,{7}>{-1}',
 				vector	: 'ValueAccessor<accessor::vector<std::remove_pointer<std::result_of<\n\tdecltype({7}_array)&(cojson::size_t)>::type>::type, &{7}_array>>{-1}',
-				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}', 
+				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}',
 				objects : 'ValueObjectAccessor<cojson::accessor::array<\n' +
 			  		'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
-			  		'\t&{8}::json>{-1}', 
+			  		'\t&{8}::json>{-1}',
 				plain	: 'ValueObject<{|}\n>{-1}',
 				list	: 'ValueArray<{|}\n>{-1}',
 				"{}"	: 'ValueObject<>{-1}',
@@ -1409,7 +1465,7 @@ CojsonGenerator.Content = {
 				object	: 'MemberValue<{1}::{3}, ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>>{-1}',
 				objects	: 'MemberValue<{1}::{3}, ValueObjectAccessor<cojson::accessor::array<\n' +
 			  		'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
-			  		'\t&{8}::json>{-1}', 
+			  		'\t&{8}::json>{-1}',
 				plain	: 'MemberValue<{1}::{3}, ValueObject<{|}>\n>{-1}',
 				list	: 'MemberValue<{1}::{3}, ValueArray<{|}\n>>{-1}',
 				"{}"	: 'MemberValue<{1}::{3}, ValueObject<>\n>{-1}',
@@ -1424,14 +1480,14 @@ CojsonGenerator.Content = {
 				  	'\tstd::remove_all_extents<decltype({7})>::type,\n\tstd::extent<decltype({7}),0>::value,{7}>,\n' +
 					'\t&{8}::json>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'	 
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.methods,
 				float	: CojsonGenerator.Template.verbose.methods,
 				uint	: CojsonGenerator.Template.verbose.methods,
 				int		: CojsonGenerator.Template.verbose.methods,
-				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({8}::{7}),0>::value, &{8}::{7}>{-1}', 
+				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({8}::{7}),0>::value, &{8}::{7}>{-1}',
 				strings	: 'PropertyStrings<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, std::extent<decltype({11}::{7}),1>::value, &{11}::{7}>{-1}',
 				vector	: 'PropertyVector<{11}, {1}::{3}, std::remove_all_extents<decltype({8}::{7})>::type, std::extent<decltype({8}::{7})>::value, &{8}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
@@ -1447,7 +1503,7 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.verbose.methods,
 				uint	: CojsonGenerator.Template.verbose.methods,
 				int		: CojsonGenerator.Template.verbose.methods,
-				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, &{11}::{7}>{-1}', 
+				string	: 'PropertyString<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, &{11}::{7}>{-1}',
 				strings	: 'PropertyStrings<{11}, {1}::{3}, std::extent<decltype({11}::{7}),0>::value, std::extent<decltype({11}::{7}),1>::value, &{11}::{7}>{-1}',
 				vector	: 'PropertyVector<{11}, {1}::{3}, std::remove_all_extents<decltype({11}::{7})>::type, std::extent<decltype({11}::{7})>::value, &{11}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
@@ -1465,14 +1521,14 @@ CojsonGenerator.Content = {
 				object: 'ObjectClass<{8}{-2}{|}\n>',
 				objects: 'ValueObjectAccessor<cojson::accessor::stdvector<decltype({7}), &{7}>,\n\t&{8}::json>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'	 
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.property,
 				float	: CojsonGenerator.Template.verbose.property,
 				uint	: CojsonGenerator.Template.verbose.property,
 				int		: CojsonGenerator.Template.verbose.property,
-				string	: 'PropertyStdString<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}', 
+				string	: 'PropertyStdString<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				strings	: 'PropertyStdVector<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				vector	: 'PropertyStdVector<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
@@ -1486,11 +1542,11 @@ CojsonGenerator.Content = {
 				float	: CojsonGenerator.Template.verbose.property,
 				uint	: CojsonGenerator.Template.verbose.property,
 				int		: CojsonGenerator.Template.verbose.property,
-				string	: 'PropertyStdString<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}', 
+				string	: 'PropertyStdString<{11}, {1}::{3}, decltype({8}::{7}), &{8}::{7}>{-1}',
 				strings	: 'PropertyStdVector<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				vector	: 'PropertyStdVector<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}>{-1}',
 				object	: 'PropertyObject<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::json>{-1}',
-				objects	: 'PropertyStdVector<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::value_type::json>{-1}', 
+				objects	: 'PropertyStdVector<{11}, {1}::{3}, decltype({11}::{7}), &{11}::{7}, decltype({11}::{7})::value_type::json>{-1}',
 				list	: 'PropertyList<{11}, {1}::{3}{-2}{|}\n>{-1}',
 				"{}"	: 'PropertyExternValue<{11}, {1}::{3}, ValueObject<>>{-1}',
 				"[]"	: 'PropertyExternValue<{11}, {1}::{3}, ValueArray<>>{-1}'
@@ -1502,7 +1558,7 @@ CojsonGenerator.Content = {
 				list:   'ValueArray<{|}\n>',
 				object: 'ValueObject<{|}\n>',
 				"{}":   'ValueObject<>',
-				"[]":   'ValueArray<>'	
+				"[]":   'ValueArray<>'
 			},
 			value : {
 				bool	: CojsonGenerator.Template.verbose.value,
@@ -1512,12 +1568,12 @@ CojsonGenerator.Content = {
 				string	: 'ValueStdString<decltype({7}), &{7}>{-1}',
 				strings	: 'ValueStdVector<decltype({7}), &{7}>{-1}',
 				vector	: 'ValueStdVector<decltype({7}), &{7}>{-1}',
-				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}', 
-				objects : 'ValueObjectAccessor<cojson::accessor::stdvector<decltype({7}),&{7}>,&{8}::json>{-1}', 
+				object  : 'ValueObjectAccessor<cojson::accessor::pointer<decltype({7}),&{7}>,&{8}::json>{-1}',
+				objects : 'ValueObjectAccessor<cojson::accessor::stdvector<decltype({7}),&{7}>,&{8}::json>{-1}',
 				list	: 'ValueArray<{|}\n>{-1}',
 				"{}"	: 'ValueObject<>{-1}',
 				"[]"	: 'ValueArray<>{-1}'
-				
+
 			},
 			member : {
 				bool	: CojsonGenerator.Template.verbose.member,
@@ -1550,12 +1606,12 @@ CojsonGenerator.Content = {
 				string	: 'ValueStdString<decltype({7}), &{7}>{-1}',
 				strings	: 'ValueStdVector<decltype({7}), &{7}>{-1}',
 				vector	: 'ValueStdVector<decltype({7}), &{7}>{-1}',
-				object  : 'ValueObject<{|}>{-1}', 
-				objects : 'ValueObjectAccessor<cojson::accessor::stdvector<decltype({7}),&{7}>,&{8}::json>{-1}', 
+				object  : 'ValueObject<{|}>{-1}',
+				objects : 'ValueObjectAccessor<cojson::accessor::stdvector<decltype({7}),&{7}>,&{8}::json>{-1}',
 				list	: 'ValueArray<{|}\n>{-1}',
 				"{}"	: 'ValueObject<>{-1}',
 				"[]"	: 'ValueArray<>{-1}'
-				
+
 			},
 			member : {
 				bool	: CojsonGenerator.Template.verbose.member,
@@ -1570,7 +1626,7 @@ CojsonGenerator.Content = {
 				list	: 'MemberValue<{1}::{3}, ValueArray<{|}>\n>{-1}',
 				"{}"	: 'MemberValue<{1}::{3}, ValueObject<>>{-1}',
 				"[]"	: 'MemberValue<{1}::{3}, ValueArray<>>{-1}'
-			}			
+			}
 		},
 		line :'\n/**************************************************************************/'
 	},
@@ -1594,7 +1650,7 @@ CojsonGenerator.Content = {
 		name_too_long :  '\n\t\t/* Name is too long */',
 		name_collision :  '/* Name collision : {1} */',
 		name_collision_new :  '/* Name collision : {1}\n   Use --members or --methods instead of --variables or --fucntions */',
-		type_collision: ("/* type collision '{1}' is '{2}' and '{3}' is '{4}' */"),		
+		type_collision: ("/* type collision '{1}' is '{2}' and '{3}' is '{4}' */"),
 	}
 };
 
@@ -1613,6 +1669,7 @@ CojsonGenerator.Options = {
 	name					: 'name',
 	compact					: false,
 	example					: false,
+	arduino					: false,
 	avr						: false,
 	min_strlen				: 32,
 	textstyle				: CojsonGenerator.TextStyle,
@@ -1655,7 +1712,7 @@ CojsonGenerator.Keywords = [
 	"ValueObject", "MemberPointer", "MemberValue", "ValueVector", "ValuePointer",
 	"ValueString", "ValueStrings", "ValueArray", "ObjectClass", "PropertyScalarMember",
 	"PropertyString", "PropertyStrings", "PropertyVector", "PropertyObject",
-	"PropertyArrayOfObjects","PropertyList"	
+	"PropertyArrayOfObjects","PropertyList"
 ];
 
 

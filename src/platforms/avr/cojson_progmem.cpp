@@ -24,6 +24,7 @@
  * This file provides implementation progmem methods and placements for
  * promem literals
  */
+#ifdef __AVR__ 
 #include <avr/pgmspace.h>
 #include "cojson.hpp"
 namespace cojson {
@@ -50,6 +51,5 @@ constexpr const char literal_strings<progmem<char>>::_null_l[] __attribute__((pr
 constexpr const char literal_strings<progmem<char>>::_true_l[] __attribute__((progmem));
 constexpr const char literal_strings<progmem<char>>::_false_l[] __attribute__((progmem));
 constexpr const char literal_strings<progmem<char>>::_bom[] __attribute__((progmem));
-
-
 }}
+#endif

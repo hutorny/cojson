@@ -32,6 +32,7 @@ static const int_fast16_t chartypes[128] = {
 
 namespace cojson {
 namespace details {
+__attribute__((weak))	
 ctype chartype(char_t c) noexcept {
 	if(static_cast<size_t>(c) >= countof(chartypes)) return ctype::string;
 	return static_cast<ctype>(chartypes[(size_t)c]);

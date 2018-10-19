@@ -24,6 +24,7 @@
  * This file provides implementation progmem methods and placements for
  * promem literals
  */
+#ifdef __AVR__ 
 #include <avr/pgmspace.h>
 #include "elemental.hpp"
 namespace elemental {
@@ -43,3 +44,4 @@ progmem<char> progmem<progmem<char>>::read(const progmem<char>* ptr) {
 }
 
 }
+#endif

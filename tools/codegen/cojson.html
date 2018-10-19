@@ -7,7 +7,7 @@
 	<meta name="description" content="COJSON Code Generator">
 	<meta name="author" content="">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">    	
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
 	<link rel="stylesheet" href="css/style.css">
 	<script type="text/javascript" src="ace/ace.js"></script>
 	<script type="text/javascript" src="js/tools.js"></script>
@@ -16,25 +16,25 @@
 <body>
 <div id="container">
 	<div id="options" class="options">
-		<a id="options-close" class="btn btn-warning" href="#"> 
+		<a id="options-close" class="btn btn-warning" href="#">
 			<span class="glyphicon glyphicon-remove"></span>
 		</a>
-		<div>		
+		<div>
 	    	<label>Variant:</label>
 			<div class="btn-group btn-group-sm">
-			  <input id="variables" type="radio" name="variant" value="variables" hidden> 
+			  <input id="variables" type="radio" name="variant" value="variables" hidden>
 			  <label for="variables" class="btn btn-success" title="Maps JSON values to C/C++ variables. Lists and objects are flattened.Suitable for small JSON structures"  >Variables</label>
-			  <input id="functions" type="radio" name="variant" value="functions" hidden> 
+			  <input id="functions" type="radio" name="variant" value="functions" hidden>
 			  <label for="functions" class="btn btn-success" title="Maps scalar JSON values to functions X_get X_set. Strings are mapped to variables">Functions</label>
-			  <input id="members" type="radio" name="variant" value="members" hidden> 
+			  <input id="members" type="radio" name="variant" value="members" hidden>
 			  <label for="members" class="btn btn-success" title="Generates classes and maps JSON values to the class members">Members</label>
-			  <input id="methods" type="radio" name="variant" value="methods" hidden> 
+			  <input id="methods" type="radio" name="variant" value="methods" hidden>
 			  <label for="methods" class="btn btn-success" title="Generates classes and maps scalar JSON values to the class methods. Strings and vectors are mapped to members-arrays">Methods</label>
-			  <input id="stdlib" type="radio" name="variant" value="stdlib" hidden> 
+			  <input id="stdlib" type="radio" name="variant" value="stdlib" hidden>
 			  <label for="stdlib" class="btn btn-success" title="Generates classes and strings and vectors are mapped to members of std::string and std::vector types" value="">Stdlib</label>
-			  <input id="compact" type="checkbox" value="compact" hidden> 
+			  <input id="compact" type="checkbox" value="compact" hidden>
 			  <label for="compact" class="btn btn-primary" title="Generates compact code, e.g. uses short names V, M, P instead of full names Value..., Member..., Property..." value="compact">Compact</label>
-			</div>		
+			</div>
 			 <div class="input-group">
 			   <label for="namespace">Application namespace</label>
 			   <input type="text" class="form-control-plaintext" title="Specifies name of the top level application's namespace" id="namespace" value="">
@@ -47,19 +47,25 @@
 			   <label for="name">Names namespace</label>
 			   <input type="text" required="required" class="form-control-plaintext" title="Specifies namespace for wrapping name functions"  id="name" value="">
 			 </div>
+			 <label id="arduino-label" for="arduino" title="Generates code, suitable for Arduino platforms">For Arduino</label>
+		 	 <label id="arduino-checkbox" for="arduino">
+		 		<input id="arduino" type="checkbox" hidden="hidden">
+		 		<span class="glyphicon glyphicon-check"></span>
+		 		<span class="glyphicon glyphicon-unchecked"></span>
+		 	 </label>
 			 <label for="avr" title="Places names in AVR progmem">Use AVR progmem</label>
-		 	 <label id="avr-checkbox" for="avr">  				 	
+		 	 <label id="avr-checkbox" for="avr">
 		 		<input id="avr" type="checkbox" hidden="hidden">
 		 		<span class="glyphicon glyphicon-check"></span>
 		 		<span class="glyphicon glyphicon-unchecked"></span>
 		 	 </label>
 			 <label for="example">Write an example</label>
-		 	 <label id="example-checkbox" for="example">  				 	
+		 	 <label id="example-checkbox" for="example">  				
 		 		<input id="example" type="checkbox" hidden="hidden">
 		 		<span class="glyphicon glyphicon-check"></span>
 		 		<span class="glyphicon glyphicon-unchecked"></span>
 		 	 </label>
-		</div>	
+		</div>
 	</div>
 	<div id="terms">
 		<h3>Terms and Conditions ("Terms")</h3>
@@ -72,29 +78,29 @@
 		<p>2. This Web page does not use cookies, although it uses facilities of you browser (Local Storage) to keep information you entered on this page</p>
 		<p>3. All information, you place on this page does not leave your browser</p>
 		<h4>Intellectual property</h4>
-		<p>4. C++ code, generated on this page is copyrighted and licensed to you under the same conditions as the COJSON library - 
+		<p>4. C++ code, generated on this page is copyrighted and licensed to you under the same conditions as the COJSON library -
 		the GNU General Public License v2.<br>Please follow this link to read the License terms: <a target="_blank" href="http://www.gnu.org/licenses/gpl-2.0.html">http://www.gnu.org/licenses/gpl-2.0.html</a>
 		<p>5. Other licensing options for the generated C++ code and the COJSON library are available per request
 		<h4>Use of the Services</h4>
 		<p>6. You are permitted to use this web page for your own personal, commercial or educational use provided that you obey to the license terms.
 		<h4>Disclaimers</h4>
-		<p>7. This Web page is for informational purposes only and we do not guarantee the correctness or completeness of material on this Web page. 
+		<p>7. This Web page is for informational purposes only and we do not guarantee the correctness or completeness of material on this Web page.
 		We may make changes to the material on this Web page at any time and without notice. The material on this Website may be out of date, or on
 		rare occasions incorrect and we make no commitment to ensure that such material is correct or up to date.</p>
-		<p>8. The material at this Web page is provided without any conditions or warranties of any kind. 
-		To the maximum extent permitted by law, we provide access and use of this Web page on the basis that we exclude all representations, 
+		<p>8. The material at this Web page is provided without any conditions or warranties of any kind.
+		To the maximum extent permitted by law, we provide access and use of this Web page on the basis that we exclude all representations,
 		warranties and conditions which but for these Terms may have effect in relation to this Web page.  The
 		 material on this Web page is provided ‘as is’ and you use it at your own risk.
-		<h4>Changes</h4>	
+		<h4>Changes</h4>
 		<p>9. We reserve the right, at our sole discretion, to modify or replace these Terms at any time.
 		<h4>Acceptance</h4>
-		<p>10. <label id="terms-checkbox" for="terms-accepted">I have reed and accept these terms and conditions  				 	
+		<p>10. <label id="terms-checkbox" for="terms-accepted">I have reed and accept these terms and conditions  				
 		 		<input id="terms-accepted" type="checkbox" hidden="hidden">
 		 		<span class="glyphicon glyphicon-check"></span>
 		 		<span class="glyphicon glyphicon-unchecked"></span>
-				<a id="terms-close" class="btn btn-warning" href="#"> 
+				<a id="terms-close" class="btn btn-warning" href="#">
 					<span class="glyphicon glyphicon-remove"></span>
-				</a>			    		
+				</a>			
 		 	 </label>
 		</p>
 	</div>
@@ -103,22 +109,22 @@
     		<h3>COJSON Code Generator</h3>
     	</div>
     	<div id="info" class="cell">
-			<a href="#terms">terms</a>    		
-			<a target="_blank" href="http://hutorny.in.ua/projects/cojson-a-json-parser-for-constrained-platforms">homepage</a>    		
+			<a href="#terms">terms</a>
+			<a target="_blank" href="http://hutorny.in.ua/projects/cojson-a-json-parser-for-constrained-platforms">homepage</a>
 			<a target="_blank" href="https://github.com/hutorny/cojson">github</a>
     	</div>
-    </div>    
+    </div>
     <div id="editors-row">
 		<div class="pane cell">
 			<pre id="json"></pre>
 		</div>
 		<div id="actions">
-			<button type="button" class="btn btn-primary btn-sm" 
+			<button type="button" class="btn btn-primary btn-sm"
 					title="Run code generation from the JSON sample"
 					onclick="Run();">
 				<span class="glyphicon glyphicon-play"></span><span class="lbl"> Run</span>
 			</button>
-			<a class="btn btn-success btn-sm" href="#options" id="options-button" 
+			<a class="btn btn-success btn-sm" href="#options" id="options-button"
 					title="Tweak generation options">
 				<span class="glyphicon glyphicon-cog"></span><span class="lbl"> Options</span>
 			</a>
@@ -126,31 +132,31 @@
 			<!--  button type="button" class="btn btn-info btn-sm" onclick="PasteJson()"
 					title="Paste JSON sample into editor on the left">
 				<span class="glyphicon glyphicon-paste"></span> Paste
-				restricted by browser's security 
+				restricted by browser's security
 			</button -->
 			<button type="button" class="btn btn-success btn-sm" onclick="CopyCpp()"
 					title="Copy generated code from the editor on the right">
-				<span class="glyphicon glyphicon-copy"></span><span class="lbl"> Copy</span> 
+				<span class="glyphicon glyphicon-copy"></span><span class="lbl"> Copy</span>
 			</button>
 			<button type="button" class="btn btn-warning btn-sm" onclick="Erase()"
 					title="Erase content in the editors">
 				<span class="glyphicon glyphicon-erase"></span><span class="lbl"> Erase</span>
-			</button>			
+			</button>
 			<hr>
 			<label for="file" type="button" class="btn btn-info btn-sm"
 					title="Load a JSON file into editor on the left">
-			<span class="glyphicon glyphicon-open-file"></span><span class="lbl"> Load...</span> 
+			<span class="glyphicon glyphicon-open-file"></span><span class="lbl"> Load...</span>
 			</label>
-			<input type="file" id="file" name="file" onChange="return ReadCpp(event)"/>        						
+			<input type="file" id="file" name="file" onChange="return ReadCpp(event)"/>
 			<button type="button" class="btn btn-success btn-sm" onclick="SaveCpp()"
 					title="Save generated code from the editor on the right">
-				<span class="glyphicon glyphicon-save-file"></span><span class="lbl"> Save to...</span> 
+				<span class="glyphicon glyphicon-save-file"></span><span class="lbl"> Save to...</span>
 			</button>
 		</div>
 		<div class="pane cell">
 			<pre id="cpp"></pre>
 		</div>
-	</div>	
+	</div>
 </div>
 	<script type="text/javascript">
 		const Json = ace.edit("json");
